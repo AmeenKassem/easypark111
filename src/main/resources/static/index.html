@@ -1,0 +1,1249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>EasyPark</title>
+    <style>
+        #toast.show {
+            opacity: 1;
+            transform: translateY(0);
+            pointer-events: auto;
+        }
+
+        :root {
+            --primary: #4f46e5;
+            --primary-dark: #3730a3;
+            --accent: #22c55e;
+            --danger: #ef4444;
+            --bg: #0f172a;
+            --bg-card: #111827;
+            --bg-soft: #1f2933;
+            --text: #e5e7eb;
+            --muted: #9ca3af;
+            --border: #374151;
+            --shadow: 0 18px 45px rgba(15, 23, 42, 0.9);
+            --radius-lg: 18px;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            background: radial-gradient(circle at top, #1e293b, #020617 55%);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            align-items: stretch;
+            justify-content: center;
+        }
+
+        .app-shell {
+            display: flex;
+            width: 100%;
+            max-width: 1120px;
+            margin: 24px;
+            border-radius: 24px;
+            overflow: hidden;
+            background: linear-gradient(145deg, #020617, #020617);
+            box-shadow: var(--shadow);
+            border: 1px solid #1f2937;
+        }
+
+        .sidebar {
+            width: 34%;
+            background: radial-gradient(circle at top, #4f46e5 0, #020617 45%, #020617 100%);
+            padding: 32px 28px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            color: #e5e7eb;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-badge {
+            width: 42px;
+            height: 42px;
+            border-radius: 16px;
+            background: rgba(15, 23, 42, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #a5b4fc;
+            font-weight: 700;
+            font-size: 20px;
+            border: 1px solid rgba(191, 219, 254, 0.4);
+            box-shadow: 0 12px 30px rgba(15, 23, 42, 0.5);
+        }
+
+        .logo-text-main {
+            font-size: 20px;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+        }
+
+        .logo-text-sub {
+            font-size: 11px;
+            letter-spacing: 0.28em;
+            text-transform: uppercase;
+            opacity: 0.8;
+        }
+
+        .sidebar-hero {
+            margin-top: 36px;
+        }
+
+        .sidebar-title {
+            font-size: 26px;
+            font-weight: 700;
+            line-height: 1.2;
+        }
+
+        .sidebar-title span {
+            color: #a5b4fc;
+        }
+
+        .sidebar-subtitle {
+            margin-top: 10px;
+            font-size: 13px;
+            line-height: 1.6;
+            color: #e5e7eb;
+            opacity: 0.9;
+        }
+
+        .sidebar-highlight {
+            margin-top: 20px;
+            padding: 10px 12px;
+            border-radius: 999px;
+            background: rgba(15, 23, 42, 0.65);
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 11px;
+            color: #e5e7eb;
+            border: 1px solid rgba(165, 180, 252, 0.4);
+        }
+
+        .dot-green {
+            width: 8px;
+            height: 8px;
+            border-radius: 999px;
+            background: #22c55e;
+            box-shadow: 0 0 12px rgba(34, 197, 94, 0.9);
+        }
+
+        .sidebar-footer {
+            font-size: 11px;
+            color: #e5e7eb;
+            opacity: 0.8;
+        }
+
+        .sidebar-footer strong {
+            color: #e5e7eb;
+        }
+
+        .main {
+            width: 66%;
+            padding: 24px 28px 28px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            background: radial-gradient(circle at top left, #111827, #020617 60%);
+        }
+
+        .main-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .pill-nav {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px;
+            border-radius: 999px;
+            background: rgba(15, 23, 42, 0.9);
+            border: 1px solid rgba(55, 65, 81, 0.9);
+        }
+
+        .pill-nav button {
+            border: none;
+            background: transparent;
+            color: var(--muted);
+            font-size: 12px;
+            padding: 6px 14px;
+            border-radius: 999px;
+            cursor: pointer;
+            transition: all 0.18s ease;
+        }
+
+        .pill-nav button.active {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: #e5e7eb;
+            box-shadow: 0 10px 30px rgba(79, 70, 229, 0.45);
+        }
+
+        .badge-env {
+            font-size: 11px;
+            padding: 4px 10px;
+            border-radius: 999px;
+            background: rgba(15, 23, 42, 0.9);
+            border: 1px solid rgba(55, 65, 81, 0.9);
+            color: var(--muted);
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .badge-env span {
+            width: 7px;
+            height: 7px;
+            border-radius: 999px;
+            background: #22c55e;
+        }
+
+        .view {
+            display: none;
+        }
+
+        .view.active {
+            display: block;
+        }
+
+        .card {
+            background: radial-gradient(circle at top left, #111827, #020617);
+            border-radius: var(--radius-lg);
+            padding: 18px 18px 20px;
+            border: 1px solid rgba(31, 41, 55, 0.9);
+            box-shadow: 0 18px 45px rgba(15, 23, 42, 0.9);
+        }
+
+        .card-header {
+            margin-bottom: 14px;
+        }
+
+        .card-title {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .card-subtitle {
+            font-size: 12px;
+            color: var(--muted);
+            margin-top: 4px;
+        }
+
+        form {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 6px;
+        }
+
+        label {
+            font-size: 12px;
+            color: var(--muted);
+        }
+
+        input, select {
+            margin-top: 4px;
+            width: 100%;
+            padding: 8px 10px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            background: rgba(15, 23, 42, 0.9);
+            color: var(--text);
+            font-size: 13px;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 1px rgba(79, 70, 229, 0.4);
+        }
+
+        .btn {
+            border: none;
+            border-radius: 999px;
+            padding: 8px 14px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: #e5e7eb;
+            box-shadow: 0 12px 30px rgba(79, 70, 229, 0.4);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 18px 40px rgba(79, 70, 229, 0.55);
+        }
+
+        .btn-ghost {
+            background: transparent;
+            color: var(--muted);
+            border: 1px solid var(--border);
+        }
+
+        .btn-ghost:hover {
+            border-color: var(--primary);
+            color: #e5e7eb;
+        }
+
+        .btn-danger {
+            background: rgba(239, 68, 68, 0.12);
+            color: #fecaca;
+            border: 1px solid rgba(239, 68, 68, 0.6);
+        }
+
+        .btn-danger:hover {
+            background: rgba(239, 68, 68, 0.18);
+        }
+
+        .two-column {
+            display: grid;
+            grid-template-columns: 3fr 2.5fr;
+            gap: 16px;
+            margin-top: 6px;
+        }
+
+        .map-placeholder {
+            height: 220px;
+            border-radius: 16px;
+            background: radial-gradient(circle at top, rgba(59, 130, 246, 0.45), rgba(15, 23, 42, 1));
+            border: 1px solid rgba(30, 64, 175, 0.7);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .map-header {
+            position: absolute;
+            top: 10px;
+            left: 12px;
+            right: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 11px;
+            color: #dbeafe;
+        }
+
+        .pill-small {
+            padding: 4px 8px;
+            border-radius: 999px;
+            background: rgba(15, 23, 42, 0.7);
+            border: 1px solid rgba(59, 130, 246, 0.6);
+        }
+
+        .map-badge {
+            position: absolute;
+            bottom: 12px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 7px 10px;
+            border-radius: 999px;
+            background: rgba(15, 23, 42, 0.85);
+            border: 1px solid rgba(148, 163, 184, 0.7);
+            font-size: 11px;
+            color: #e5e7eb;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .pin-ring {
+            width: 20px;
+            height: 20px;
+            border-radius: 999px;
+            border: 2px solid rgba(96, 165, 250, 0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .pin-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 999px;
+            background: #22c55e;
+        }
+
+        .map-pulse {
+            position: absolute;
+            top: 50%;
+            left: 55%;
+            width: 48px;
+            height: 48px;
+            border-radius: 999px;
+            background: radial-gradient(circle, rgba(96, 165, 250, 0.45), transparent 65%);
+            transform: translate(-50%, -50%);
+        }
+
+        .log-card {
+            height: 220px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .log-output {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 12px;
+            background: rgba(15, 23, 42, 0.94);
+            border: 1px solid rgba(31, 41, 55, 0.9);
+            font-size: 12px;
+            color: #e5e7eb;
+            height: 145px;
+            overflow: auto;
+            white-space: pre-wrap;
+        }
+
+        .badge-small {
+            font-size: 11px;
+            padding: 4px 8px;
+            border-radius: 999px;
+            background: rgba(15, 23, 42, 0.9);
+            border: 1px solid rgba(55, 65, 81, 0.9);
+            color: var(--muted);
+        }
+
+        .field-row {
+            display: flex;
+            gap: 8px;
+        }
+
+        .field-row .btn {
+            margin-top: 16px;
+        }
+
+        @media (max-width: 900px) {
+            .app-shell {
+                flex-direction: column;
+                margin: 12px;
+            }
+
+            .sidebar {
+                width: 100%;
+            }
+
+            .main {
+                width: 100%;
+            }
+
+            .two-column {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        /* Forgot password + modal */
+        .forgot-password {
+            margin-top: 8px;
+        }
+
+        .forgot-password a {
+            font-size: 13px;
+            color: #facc15;
+            cursor: pointer;
+            text-decoration: none;
+        }
+
+        .forgot-password a:hover {
+            text-decoration: underline;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.65);
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+        }
+
+        .modal.open {
+            display: flex;
+        }
+
+        .modal-content {
+            background: #1e293b;
+            padding: 20px;
+            border-radius: 12px;
+            width: 300px;
+            color: white;
+            border: 1px solid #475569;
+            box-shadow: 0 18px 45px rgba(15, 23, 42, 0.9);
+        }
+
+        .modal-content h2 {
+            margin-top: 0;
+            margin-bottom: 12px;
+            font-size: 18px;
+        }
+
+        .modal-content input {
+            width: 100%;
+        }
+
+        .auth-divider {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            margin: 24px 0;
+            color: #e5e7eb;
+            font-size: 0.9rem;
+        }
+
+        .auth-divider-line {
+            flex: 1;
+            height: 1px;
+            background: rgba(255, 255, 255, 0.18);
+            border-radius: 999px;
+        }
+
+        .auth-divider-text {
+            white-space: nowrap;
+        }
+
+        #google-login-wrapper {
+            display: flex;
+            justify-content: center;
+            margin-top: 12px;
+        }
+
+        #google-login-container {
+            display: inline-block;
+        }
+
+        #google-login-container > div {
+            min-width: 260px;
+        }
+
+        .logo {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+
+        .logo-image {
+            width: 140px;
+            height: auto;
+            object-fit: contain;
+            border-radius: 22px;
+        }
+    </style>
+    <script src="https://accounts.google.com/gsi/client?hl=en" async defer></script>
+</head>
+<body>
+<div class="app-shell">
+    <div id="toast" style="
+    position: fixed;
+    top: 18px;
+    right: 18px;
+    min-width: 220px;
+    max-width: 320px;
+    padding: 10px 14px;
+    border-radius: 999px;
+    font-size: 13px;
+    color: #e5e7eb;
+    background: rgba(22, 163, 74, 0.92);
+    box-shadow: 0 18px 45px rgba(15, 23, 42, 0.9);
+    border: 1px solid rgba(22, 163, 74, 0.9);
+    opacity: 0;
+    transform: translateY(-10px);
+    pointer-events: none;
+    transition: all 0.25s ease;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+">
+        <span id="toast-text">Notification</span>
+    </div>
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+        <div>
+            <div class="logo">
+                <img src="/Logo.png" class="logo-image" alt="EasyPark Logo">
+            </div>
+
+            <div class="sidebar-hero">
+                <div class="sidebar-title">
+                    Park in <span>seconds</span>,<br/>
+                    not circles.
+                </div>
+                <div class="sidebar-subtitle">
+                    A real-time marketplace connecting drivers with private parking
+                    owners across the city.
+                </div>
+                <div class="sidebar-highlight">
+                    <div class="dot-green"></div>
+                    <span>Live demo – backend + DB + authentication</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="sidebar-footer">
+            <strong>Hint for the demo:</strong><br/>
+            • Register once, then log in<br/>
+            • Dashboard shows a “future map” area and real users from the database.
+        </div>
+    </aside>
+
+    <!-- MAIN -->
+    <main class="main">
+        <header class="main-header">
+            <div class="pill-nav">
+                <button id="tab-login" class="active" type="button">Login</button>
+                <button id="tab-register" type="button">Register</button>
+                <button id="tab-dashboard" type="button" disabled>Dashboard</button>
+            </div>
+            <div class="badge-env">
+                <span></span>
+                Local Dev · Spring Boot · H2
+            </div>
+        </header>
+
+        <!-- LOGIN VIEW -->
+        <section id="view-login" class="view active">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">Welcome back</div>
+                    <div class="card-subtitle">
+                        Log in to access the live dashboard and see how EasyPark will look for drivers and owners.
+                    </div>
+                </div>
+
+                <form id="login-form">
+                    <div>
+                        <label>Email</label>
+                        <input type="email" id="login-email" placeholder="you@example.com" required>
+                    </div>
+                    <div>
+                        <label>Password</label>
+                        <input type="password" id="login-password" placeholder="••••••••" required>
+                    </div>
+
+                    <div class="field-row" style="justify-content: space-between; align-items: center; margin-top: 4px;">
+                        <button type="submit" class="btn btn-primary">
+                            Log in
+                        </button>
+                        <button id="to-register-from-login" type="button" class="btn btn-ghost">
+                            New here? Create account
+                        </button>
+                    </div>
+
+                    <!-- Forgot password link -->
+                    <p class="forgot-password">
+                        <a href="#" id="forgot-password-link">Forgot password?</a>
+                    </p>
+                </form>
+
+                <!-- Google Login -->
+                <div style="margin-top: 12px; text-align: center;">
+                    <div class="auth-divider">
+                        <span class="auth-divider-line"></span>
+                        <span class="auth-divider-text">or</span>
+                        <span class="auth-divider-line"></span>
+                    </div>
+
+                    <!-- Google button -->
+                    <div id="google-login-wrapper">
+                        <div id="google-login-container"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- REGISTER VIEW -->
+        <section id="view-register" class="view">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">Create your EasyPark account</div>
+                    <div class="card-subtitle">
+                        Register as a future driver or parking owner. Passwords are securely hashed and stored in H2.
+                    </div>
+                </div>
+
+                <form id="register-form">
+                    <div class="field-row">
+                        <div style="flex: 1;">
+                            <label>Full name</label>
+                            <input type="text" id="reg-fullName" placeholder="Ameen Kassem" required>
+                        </div>
+                        <div style="width: 120px;">
+                            <label>Role</label>
+                            <select id="reg-role">
+                                <option value="DRIVER">Driver</option>
+                                <option value="OWNER">Owner</option>
+                                <option value="BOTH">Both</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div>
+                        <label>Email</label>
+                        <input type="email" id="reg-email" placeholder="you@example.com" required>
+                    </div>
+                    <div>
+                        <label>Phone</label>
+                        <input type="text" id="reg-phone" placeholder="050-0000000" required>
+                    </div>
+                    <div>
+                        <label>Password</label>
+                        <input type="password" id="reg-password" placeholder="Choose a password" required>
+                    </div>
+
+                    <div class="field-row" style="justify-content: space-between; align-items: center; margin-top: 4px;">
+                        <button type="submit" class="btn btn-primary">
+                            Register
+                        </button>
+                        <button id="to-login-from-register" type="button" class="btn btn-ghost">
+                            Back to login
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </section>
+
+        <!-- DASHBOARD VIEW -->
+        <section id="view-dashboard" class="view">
+            <div class="card">
+                <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <div class="card-title">EasyPark Live Dashboard</div>
+                        <div class="card-subtitle" id="dashboard-subtitle">
+                            Connected as <span id="current-user-email">–</span>.
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                        <span class="badge-small">Prototype · No real payments yet</span>
+                        <button id="logout-btn" type="button" class="btn btn-danger">Logout</button>
+                    </div>
+                </div>
+
+                <div class="two-column">
+                    <!-- Map area -->
+                    <div class="map-placeholder">
+                        <div class="map-header">
+                            <div class="pill-small">Tel Aviv · Demo Mode</div>
+                            <div class="pill-small">Parking spots: coming soon</div>
+                        </div>
+                        <div class="map-pulse"></div>
+                        <div class="map-badge">
+                            <div class="pin-ring">
+                                <div class="pin-dot"></div>
+                            </div>
+                            <span>Future: real-time parking map powered by Google Maps API</span>
+                        </div>
+                    </div>
+
+                    <!-- Log / Users area -->
+                    <div class="log-card card">
+                        <div class="card-header" style="margin-bottom: 6px;">
+                            <div class="card-title" style="font-size: 15px;">System activity</div>
+                            <div class="card-subtitle">
+                                View all registered users stored in the H2 database.
+                            </div>
+                        </div>
+
+                        <div style="display: flex; justify-content: space-between; align-items: center; gap: 6px;">
+                            <button id="show-users-btn" type="button" class="btn btn-ghost" style="flex: 1;">
+                                Show registered users
+                            </button>
+                            <button id="clear-log-btn" type="button" class="btn btn-ghost" style="padding-inline: 10px;">
+                                Clear
+                            </button>
+                        </div>
+
+                        <div id="log-output" class="log-output">
+                            Waiting for action...
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ✅ NEW: Parking panel (keeps your design) -->
+                <div class="card" style="margin-top: 16px;">
+                    <div class="card-header" style="margin-bottom: 6px;">
+                        <div class="card-title" style="font-size: 15px;">Parking Spots</div>
+                        <div class="card-subtitle">
+                            Uses the real backend endpoints: /api/parking-spots
+                        </div>
+                    </div>
+
+                    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                        <button id="create-demo-parking-btn" type="button" class="btn btn-ghost">
+                            Create demo parking (OWNER)
+                        </button>
+                        <button id="my-parkings-btn" type="button" class="btn btn-ghost">
+                            Load my parkings (OWNER)
+                        </button>
+                        <button id="search-parkings-btn" type="button" class="btn btn-ghost">
+                            Search parkings
+                        </button>
+                    </div>
+
+                    <div id="parking-output" class="log-output" style="height: 160px;">
+                        Parking output...
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <div id="output" style="font-size: 12px; color: var(--muted); margin-left: 2px;"></div>
+    </main>
+</div>
+
+<!-- Forgot Password Modal -->
+<div id="forgot-modal" class="modal">
+    <div class="modal-content">
+        <h2>Reset Password</h2>
+        <p style="font-size: 13px; color: #cbd5f5; margin-top: 0; margin-bottom: 10px;">
+            Enter your email and we will send you a reset link.
+        </p>
+        <input type="email" id="forgot-email" placeholder="you@example.com" />
+        <div style="margin-top: 14px; display:flex; justify-content: flex-end; gap:8px;">
+            <button id="forgot-cancel-btn" class="btn btn-ghost" type="button">Cancel</button>
+            <button id="forgot-submit-btn" class="btn btn-primary" type="button">Reset</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Basic "state" in JS only (no real session yet)
+    let currentUserEmail = null;
+
+    // ===================== JWT (ADDED) =====================
+    let authToken = localStorage.getItem("easypark_token") || null;
+
+    function setAuthToken(token) {
+        authToken = token || null;
+        if (authToken) localStorage.setItem("easypark_token", authToken);
+        else localStorage.removeItem("easypark_token");
+    }
+
+    function authHeaders(extra = {}) {
+        return authToken
+            ? { ...extra, "Authorization": "Bearer " + authToken }
+            : { ...extra };
+    }
+
+    function prettyPrint(text) {
+        try {
+            const obj = JSON.parse(text);
+            return JSON.stringify(obj, null, 2);
+        } catch {
+            return text;
+        }
+    }
+
+    const viewLogin = document.getElementById('view-login');
+    const viewRegister = document.getElementById('view-register');
+    const viewDashboard = document.getElementById('view-dashboard');
+
+    const tabLogin = document.getElementById('tab-login');
+    const tabRegister = document.getElementById('tab-register');
+    const tabDashboard = document.getElementById('tab-dashboard');
+
+    const output = document.getElementById('output');
+    const logOutput = document.getElementById('log-output');
+    const parkingOutput = document.getElementById('parking-output');
+    const currentUserEmailSpan = document.getElementById('current-user-email');
+    const toast = document.getElementById('toast');
+    const toastText = document.getElementById('toast-text');
+
+    // Forgot password elements
+    const forgotModal = document.getElementById('forgot-modal');
+    const forgotPasswordLink = document.getElementById('forgot-password-link');
+    const forgotEmailInput = document.getElementById('forgot-email');
+    const forgotCancelBtn = document.getElementById('forgot-cancel-btn');
+    const forgotSubmitBtn = document.getElementById('forgot-submit-btn');
+
+    function showToast(message, type = 'success') {
+        toastText.textContent = message;
+
+        // Color by type
+        if (type === 'error') {
+            toast.style.background = 'rgba(220, 38, 38, 0.92)';
+            toast.style.borderColor = 'rgba(220, 38, 38, 0.9)';
+        } else {
+            toast.style.background = 'rgba(22, 163, 74, 0.92)';
+            toast.style.borderColor = 'rgba(22, 163, 74, 0.9)';
+        }
+
+        toast.classList.add('show');
+
+        setTimeout(() => {
+            toast.classList.remove('show');
+        }, 2200);
+    }
+
+    const showView = (viewName) => {
+        viewLogin.classList.remove('active');
+        viewRegister.classList.remove('active');
+        viewDashboard.classList.remove('active');
+
+        tabLogin.classList.remove('active');
+        tabRegister.classList.remove('active');
+        tabDashboard.classList.remove('active');
+
+        if (viewName === 'login') {
+            viewLogin.classList.add('active');
+            tabLogin.classList.add('active');
+        } else if (viewName === 'register') {
+            viewRegister.classList.add('active');
+            tabRegister.classList.add('active');
+        } else if (viewName === 'dashboard') {
+            viewDashboard.classList.add('active');
+            tabDashboard.classList.add('active');
+        }
+    };
+
+    // Navigation buttons
+    document.getElementById('to-register-from-login').addEventListener('click', () => {
+        showView('register');
+        output.textContent = 'Switched to registration form.';
+    });
+
+    document.getElementById('to-login-from-register').addEventListener('click', () => {
+        showView('login');
+        output.textContent = 'Back to login.';
+    });
+
+    // Tabs (Login/Register)
+    tabLogin.addEventListener('click', () => {
+        showView('login');
+    });
+
+    tabRegister.addEventListener('click', () => {
+        showView('register');
+    });
+
+    // Forgot password modal controls
+    function openForgotModal() {
+        const loginEmail = document.getElementById('login-email').value;
+        forgotEmailInput.value = loginEmail || '';
+        forgotModal.classList.add('open');
+    }
+
+    function closeForgotModal() {
+        forgotModal.classList.remove('open');
+    }
+
+    // ===== Google Login =====
+    async function handleGoogleCredentialResponse(response) {
+        try {
+            const idToken = response.credential;
+
+            const res = await fetch('/api/auth/google-login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    googleIdToken: idToken
+                })
+            });
+
+            const data = await res.json().catch(() => ({}));
+
+            if (!res.ok) {
+                showToast(data.message || 'Google login failed', 'error');
+                output.textContent = 'Google login failed: ' + (data.message || JSON.stringify(data));
+                return;
+            }
+
+            // ✅ store token (ADDED)
+            setAuthToken(data.token || data.accessToken || data.jwt);
+
+            const user = data.userSummary || data.summary || {};
+            currentUserEmail = user.email || 'Google user';
+            currentUserEmailSpan.textContent = currentUserEmail;
+
+            tabDashboard.disabled = false;
+            tabLogin.classList.add('hidden');
+            tabRegister.classList.add('hidden');
+            showView('dashboard');
+
+            showToast('Logged in with Google', 'success');
+            output.textContent = 'Google login successful. Switched to dashboard.';
+        } catch (err) {
+            console.error(err);
+            showToast('Google login error: ' + err, 'error');
+            output.textContent = 'Google login error: ' + err;
+        }
+    }
+
+    async function handleForgotSubmit() {
+        const email = forgotEmailInput.value.trim();
+
+        if (!email) {
+            showToast("Please enter your email", "error");
+            return;
+        }
+
+        try {
+            const response = await fetch("/api/auth/forgot-password", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email })
+            });
+
+            const data = await response.json().catch(() => ({}));
+
+            if (response.ok) {
+                showToast(data.message || "If this email exists, a reset link has been sent.", "success");
+                closeForgotModal();
+            } else {
+                showToast(data.message || "Error requesting password reset", "error");
+            }
+        } catch (err) {
+            showToast("Error requesting password reset: " + err, "error");
+        }
+    }
+
+    forgotPasswordLink.addEventListener("click", (e) => {
+        e.preventDefault();
+        openForgotModal();
+    });
+
+    forgotCancelBtn.addEventListener("click", () => {
+        closeForgotModal();
+    });
+
+    forgotSubmitBtn.addEventListener("click", () => {
+        handleForgotSubmit();
+    });
+
+    // Login form submit
+    document.getElementById('login-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const payload = {
+            email: document.getElementById('login-email').value,
+            password: document.getElementById('login-password').value
+        };
+
+        try {
+            const response = await fetch('/api/auth/login', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(payload)
+            });
+
+            const text = await response.text();
+
+            if (!response.ok) {
+                output.textContent = 'Login failed: ' + text;
+                showToast('Login failed', 'error');
+                return;
+            }
+
+            // ✅ parse response and store token (ADDED)
+            let data = {};
+            try { data = JSON.parse(text); } catch {}
+            setAuthToken(data.token || data.accessToken || data.jwt);
+
+            currentUserEmail = (data.userSummary && data.userSummary.email) ? data.userSummary.email : payload.email;
+            currentUserEmailSpan.textContent = currentUserEmail;
+
+            output.textContent = 'Login successful. Switched to dashboard.';
+            showToast('Logged in successfully', 'success');
+
+            tabDashboard.disabled = false;
+            tabLogin.classList.add('hidden');
+            tabRegister.classList.add('hidden');
+
+            showView('dashboard');
+
+        } catch (err) {
+            output.textContent = 'Login error: ' + err;
+        }
+    });
+
+    // Register form submit
+    document.getElementById('register-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const payload = {
+            fullName: document.getElementById('reg-fullName').value,
+            email: document.getElementById('reg-email').value,
+            phone: document.getElementById('reg-phone').value,
+            role: document.getElementById('reg-role').value,
+            password: document.getElementById('reg-password').value
+        };
+
+        try {
+            const response = await fetch('/api/auth/register', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(payload)
+            });
+
+            const text = await response.text();
+            if (!response.ok) {
+                output.textContent = 'Registration failed: ' + text;
+                showToast('Registration failed', 'error');
+                return;
+            }
+
+            output.textContent = 'Registration successful. You can now log in.';
+            showView('login');
+            showToast('Account created successfully', 'success');
+
+        } catch (err) {
+            output.textContent = 'Registration error: ' + err;
+        }
+    });
+
+    // Dashboard: show users (✅ now uses Authorization header)
+    document.getElementById('show-users-btn').addEventListener('click', async () => {
+        try {
+            const response = await fetch('/api/auth/users', {
+                headers: authHeaders()
+            });
+
+            const text = await response.text();
+
+            if (!response.ok) {
+                logOutput.textContent = 'Error loading users: ' + text;
+                return;
+            }
+
+            const users = JSON.parse(text);
+            if (users.length === 0) {
+                logOutput.textContent = 'No registered users yet.';
+            } else {
+                logOutput.textContent = JSON.stringify(users, null, 2);
+            }
+            output.textContent = 'Loaded users from database.';
+        } catch (err) {
+            logOutput.textContent = 'Error loading users: ' + err;
+            output.textContent = 'Error loading users: ' + err;
+        }
+    });
+
+    // Dashboard: clear log
+    document.getElementById('clear-log-btn').addEventListener('click', () => {
+        logOutput.textContent = 'Waiting for action...';
+    });
+
+    // ✅ Parking buttons (ADDED)
+    document.getElementById('create-demo-parking-btn').addEventListener('click', async () => {
+        try {
+            const payload = {
+                location: "Demo Spot - Tel Aviv",
+                lat: 32.0853,
+                lng: 34.7818,
+                pricePerHour: 12.5,
+                covered: true,
+                availableFrom: "2025-12-14T08:00:00",
+                availableTo: "2025-12-14T18:00:00"
+            };
+
+            const res = await fetch('/api/parking-spots', {
+                method: 'POST',
+                headers: authHeaders({'Content-Type': 'application/json'}),
+                body: JSON.stringify(payload)
+            });
+
+            const text = await res.text();
+            parkingOutput.textContent = res.ok
+                ? ("Created parking:\n" + prettyPrint(text))
+                : ("Create parking failed (" + res.status + "):\n" + prettyPrint(text));
+        } catch (err) {
+            parkingOutput.textContent = "Create parking error: " + err;
+        }
+    });
+
+    document.getElementById('my-parkings-btn').addEventListener('click', async () => {
+        try {
+            const res = await fetch('/api/parking-spots/my', {
+                headers: authHeaders()
+            });
+
+            const text = await res.text();
+            parkingOutput.textContent = res.ok
+                ? ("My parkings:\n" + prettyPrint(text))
+                : ("Load my parkings failed (" + res.status + "):\n" + prettyPrint(text));
+        } catch (err) {
+            parkingOutput.textContent = "Load my parkings error: " + err;
+        }
+    });
+
+    document.getElementById('search-parkings-btn').addEventListener('click', async () => {
+        try {
+            const res = await fetch('/api/parking-spots/search?covered=true&minPrice=0&maxPrice=100', {
+                headers: authHeaders()
+            });
+
+            const text = await res.text();
+            parkingOutput.textContent = res.ok
+                ? ("Search results:\n" + prettyPrint(text))
+                : ("Search failed (" + res.status + "):\n" + prettyPrint(text));
+        } catch (err) {
+            parkingOutput.textContent = "Search error: " + err;
+        }
+    });
+
+    // Logout
+    document.getElementById('logout-btn').addEventListener('click', () => {
+        // ✅ clear token (ADDED)
+        setAuthToken(null);
+
+        currentUserEmail = null;
+        currentUserEmailSpan.textContent = '–';
+        document.getElementById('login-email').value = '';
+        document.getElementById('login-password').value = '';
+        output.textContent = 'Logged out. Back to login page.';
+
+        tabDashboard.disabled = true;
+        tabLogin.classList.remove('hidden');
+        tabRegister.classList.remove('hidden');
+
+        showView('login');
+    });
+
+    // Initialize Google Sign-In button
+    window.onload = function () {
+        if (window.google && window.google.accounts && window.google.accounts.id) {
+            google.accounts.id.initialize({
+                client_id: "489117864776-2n3budaeu2s75q3dg8s6gb4088crampj.apps.googleusercontent.com",
+                callback: handleGoogleCredentialResponse
+            });
+
+            const container = document.getElementById("google-login-container");
+            if (container) {
+                google.accounts.id.renderButton(container, {
+                    type: "standard",
+                    theme: "outline",
+                    size: "large",
+                    shape: "pill",
+                    width: 240,
+                    text: "continue_with",
+                });
+            }
+        }
+    };
+</script>
+</body>
+</html>

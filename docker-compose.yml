@@ -1,0 +1,64 @@
+services:
+  db:
+    image: mysql:8.0
+    container_name: easypark-db
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: easypark
+      MYSQL_ROOT_PASSWORD: rootpassword
+    ports:
+      - "3307:3306"
+    volumes:
+      - easypark_mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-prootpassword"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: .
+    container_name: easypark-backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://db:3306/easypark?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Jerusalem
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: rootpassword
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SPRING_JPA_SHOW_SQL: "true"
+      SPRING_JPA_DATABASE_PLATFORM: org.hibernate.dialect.MySQLDialect
+      SERVER_ADDRESS: 0.0.0.0
+      SERVER_PORT: 8080
+      SECURITY_JWT_SECRET: change_this_to_a_long_random_secret
+      SECURITY_JWT_EXPIRATION_MINUTES: 60
+      GOOGLE_CLIENT_ID: your_google_client_id
+      SPRING_MAIL_HOST: smtp.gmail.com
+      SPRING_MAIL_PORT: 587
+      SPRING_MAIL_USERNAME: your_email@gmail.com
+      SPRING_MAIL_PASSWORD: your_gmail_app_password
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH: "true"
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE: "true"
+      SPRING_MAIL_FROM: your_email@gmail.com
+      APP_FRONTEND_RESET_PASSWORD_URL: http://localhost:5173/reset-password
+      APP_SECURITY_RESET_TOKEN_EXPIRATION_MINUTES: 30
+
+  frontend:
+    build:
+      context: ./frontend
+    container_name: easypark-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "5173:5173"
+    environment:
+      VITE_API_BASE_URL: http://localhost:8080
+
+volumes:
+  easypark_mysql_data:

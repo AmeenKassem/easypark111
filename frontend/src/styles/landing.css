@@ -1,0 +1,149 @@
+/* Light landing background */
+.landing-bg {
+    min-height: calc(100vh - 72px); /* אם ה-Layout שלך מוסיף header; אם לא – תשנה ל-100vh */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 32px 16px;
+    background: #f6f8fc;
+}
+
+/* Card */
+.landing-card {
+    width: 100%;
+    max-width: 420px;
+    background: #ffffff;
+    border-radius: 22px;
+    padding: 34px 34px 28px;
+    box-shadow: 0 14px 45px rgba(17, 24, 39, 0.12);
+    border: 1px solid rgba(17, 24, 39, 0.06);
+    text-align: center;
+}
+
+/* Top icon bubble */
+.landing-bubble {
+    width: 78px;
+    height: 78px;
+    border-radius: 999px;
+    margin: -64px auto 14px;
+    background: #ffffff;
+    box-shadow: 0 10px 30px rgba(17, 24, 39, 0.12);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(17, 24, 39, 0.06);
+    font-size: 22px;
+}
+
+/* Titles */
+.landing-title {
+    margin: 0;
+    font-size: 30px;
+    font-weight: 800;
+    color: #0f172a;
+    letter-spacing: -0.02em;
+}
+
+.landing-subtitle {
+    margin: 8px 0 18px;
+    color: #64748b;
+    font-size: 14px;
+}
+
+/* Google button */
+.landing-google {
+    width: 100%;
+    height: 48px;
+    border-radius: 12px;
+    border: 1px solid rgba(17, 24, 39, 0.10);
+    background: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.landing-google:hover {
+    background: #fbfbfd;
+}
+
+/* Divider "OR" */
+.landing-divider {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 18px 0 14px;
+    color: #94a3b8;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.landing-divider::before,
+.landing-divider::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: rgba(148, 163, 184, 0.45);
+}
+
+/* Labels and inputs */
+.landing-label {
+    text-align: left;
+    font-size: 12px;
+    font-weight: 700;
+    color: #334155;
+    margin: 14px 0 8px;
+}
+
+.landing-input {
+    width: 100%;
+    height: 46px;
+    border-radius: 12px;
+    border: 1px solid rgba(17, 24, 39, 0.10);
+    padding: 0 14px;
+    outline: none;
+    background: #fff;
+}
+
+.landing-input:focus {
+    border-color: rgba(59, 130, 246, 0.45);
+    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.12);
+}
+
+/* Primary button */
+.landing-primary {
+    width: 100%;
+    height: 50px;
+    margin-top: 16px;
+    border-radius: 14px;
+    border: 0;
+    background: #0b1220;
+    color: #fff;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.landing-primary:hover {
+    filter: brightness(1.05);
+}
+
+/* Bottom links row */
+.landing-bottom {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 14px;
+    font-size: 12.5px;
+    color: #64748b;
+}
+
+.landing-bottom a {
+    color: #0f172a;
+    font-weight: 800;
+    text-decoration: none;
+}
+
+.landing-bottom a:hover {
+    text-decoration: underline;
+}

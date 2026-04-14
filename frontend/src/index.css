@@ -1,0 +1,151 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+* {
+  color: inherit;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+/* ===============================
+   Global Theme Tokens (ROOT)
+   =============================== */
+:root {
+  --bg-page: #f6f8fb;
+  --bg-card: #ffffff;
+  --bg-soft: rgba(15, 23, 42, 0.03);
+
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #64748b;
+  --text-inverse: #ffffff;
+
+  --border-soft: rgba(15, 23, 42, 0.12);
+
+  --primary: #2563eb;
+  --primary-soft: rgba(37, 99, 235, 0.12);
+
+  --danger: #ef4444;
+}
+
+body {
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+  background: var(--bg-page);
+  color: var(--text-primary);
+
+  /* IMPORTANT: allow scrolling globally */
+  overflow: auto;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: var(--text-primary);
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* Google Places Autocomplete dropdown fix */
+.pac-container {
+  z-index: 999999 !important; /* must be above headers/modals */
+  background: #ffffff !important;
+  color: #0f172a !important;
+  border-radius: 10px;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.18);
+  overflow: hidden;
+}
+
+.pac-item {
+  color: #0f172a !important;
+  background: #ffffff !important;
+  padding: 10px 12px;
+  cursor: pointer;
+}
+
+.pac-item:hover {
+  background: #f1f5f9 !important;
+}
+
+.pac-item-query {
+  color: #0f172a !important;
+}
+
+.pac-matched {
+  color: #2563eb !important;
+  font-weight: 700;
+}
+/* TimeDropdown (reusable) */
+.ep-timefield {
+  width: 100%;
+  height: 48px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 12px;
+  font-size: 16px;
+  cursor: pointer;
+  color: #0f172a;
+}
+
+.ep-timefield.is-disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.ep-timefield__text.is-placeholder {
+  color: #94a3b8;
+}
+
+.ep-timefield__caret {
+  color: #64748b;
+  margin-left: 10px;
+}
+
+.ep-timemenu {
+  position: fixed;           /* IMPORTANT: avoids clipping in modal/phone view */
+  z-index: 999999;           /* above modal */
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.18);
+  overflow-y: auto;
+}
+
+.ep-timeoption {
+  height: 44px;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  padding: 0 12px;
+  font-size: 16px;
+  cursor: pointer;
+  color: #0f172a;
+}
+
+.ep-timeoption:hover {
+  background: #f1f5f9;
+}
+
+.ep-timeoption.is-active {
+  background: #eff6ff;
+  font-weight: 700;
+}
