@@ -73,7 +73,8 @@ public class SecurityConfig {
         config.setAllowedOriginPatterns(List.of(
                 "http://localhost:5173",
                 "http://10.0.0.*:5173",
-                "http://192.168.*.*:5173"
+                "http://192.168.*.*:5173",
+                "https://easypark111.vercel.app"
         ));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("Authorization", "Content-Type"));
