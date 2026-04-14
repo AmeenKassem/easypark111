@@ -1,8 +1,8 @@
 import axios from 'axios';
 import { getAuthToken } from './session';
+import {API_BASE_URL} from "../config.js";
 
-const API_URL = 'http://localhost:8080/api/reports';
-
+const API_URL = `${API_BASE_URL}/api/reports`
 const getAuthHeaders = () => {
     const token = getAuthToken();
     return { headers: { Authorization: `Bearer ${token}` } };
