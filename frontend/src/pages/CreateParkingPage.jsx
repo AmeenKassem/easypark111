@@ -6,7 +6,7 @@ import "react-datepicker/dist/react-datepicker.css";
 import TimeDropdown from '../components/inputs/TimeDropdown';
 import { generateTimeOptions } from '../utils/timeOptions';
 import { API_BASE_URL } from "../config.js";
-import MapComponent from '../components/map/MapComponent';
+import MapComponent from '../components/map/mapComponent';
 
 const toYMD = (d) => {
     if (!d) return '';
