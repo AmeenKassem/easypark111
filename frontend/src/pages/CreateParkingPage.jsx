@@ -1,12 +1,12 @@
 import React, { useEffect, useState, useMemo } from 'react';
-
 import axios from 'axios';
 import AddressAutocomplete from '../components/forms/AddressAutocomplete';
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
-import TimeDropdown from '../components/inputs/TimeDropdown'
-import { generateTimeOptions } from '../utils/timeOptions'
-import {API_BASE_URL} from "../config.js";
+import TimeDropdown from '../components/inputs/TimeDropdown';
+import { generateTimeOptions } from '../utils/timeOptions';
+import { API_BASE_URL } from "../config.js";
+import MapComponent from '../components/map/MapComponent';
 
 const toYMD = (d) => {
     if (!d) return '';
@@ -15,20 +15,22 @@ const toYMD = (d) => {
     const day = String(d.getDate()).padStart(2, '0');
     return `${y}-${m}-${day}`;
 };
+
 const splitIsoToDateTime = (iso) => {
-    if (!iso) return { date: '', time: '' }
-    const s = String(iso)
-    const [d, tRaw] = s.split('T')
-    const t = (tRaw || '').slice(0, 5)
-    return { date: d || '', time: t || '' }
-}
+    if (!iso) return { date: '', time: '' };
+    const s = String(iso);
+    const [d, tRaw] = s.split('T');
+    const t = (tRaw || '').slice(0, 5);
+    return { date: d || '', time: t || '' };
+};
 
 const normalizeTimeHHMM = (t) => {
-    if (!t) return ''
-    return String(t).slice(0, 5)
-}
+    if (!t) return '';
+    return String(t).slice(0, 5);
+};
 
 const CreateParkingPage = ({ onClose, onCreated, onUpdated, mode = 'create', initialSpot = null }) => {
+    const [locationInputMode, setLocationInputMode] = useState('search');
 
     const [formData, setFormData] = useState({
         location: '',
@@ -58,9 +60,9 @@ const CreateParkingPage = ({ onClose, onCreated, onUpdated, mode = 'create', ini
     const [batchTime, setBatchTime] = useState({ start: '', end: '' });
     const [loading, setLoading] = useState(false);
     const [apiMessage, setApiMessage] = useState('');
-
+    const [pendingPin, setPendingPin] = useState(null);
     useEffect(() => {
-        if (mode !== 'edit' || !initialSpot) return
+        if (mode !== 'edit' || !initialSpot) return;
 
         setFormData({
             location: initialSpot.location || '',
@@ -69,33 +71,33 @@ const CreateParkingPage = ({ onClose, onCreated, onUpdated, mode = 'create', ini
             lng: initialSpot.lng ?? null,
             pricePerHour: String(initialSpot.pricePerHour ?? ''),
             covered: !!initialSpot.covered,
-        })
+        });
 
-        const t = String(initialSpot.availabilityType || '').toLowerCase()
-        if (t === 'recurring') setAvailabilityType('recurring')
-        else setAvailabilityType('specific')
+        const t = String(initialSpot.availabilityType || '').toLowerCase();
+        if (t === 'recurring') setAvailabilityType('recurring');
+        else setAvailabilityType('specific');
 
         if (String(initialSpot.availabilityType || '').toUpperCase() === 'SPECIFIC') {
-            const slots = Array.isArray(initialSpot.specificAvailability) ? initialSpot.specificAvailability : []
+            const slots = Array.isArray(initialSpot.specificAvailability) ? initialSpot.specificAvailability : [];
             const mapped = slots.length
                 ? slots.map((s) => {
-                    const start = splitIsoToDateTime(s.start)
-                    const end = splitIsoToDateTime(s.end)
+                    const start = splitIsoToDateTime(s.start);
+                    const end = splitIsoToDateTime(s.end);
                     return {
                         id: Date.now() + Math.random(),
                         startDate: start.date,
                         startTime: start.time,
                         endDate: end.date,
                         endTime: end.time,
-                    }
+                    };
                 })
-                : [{ id: Date.now(), startDate: '', startTime: '', endDate: '', endTime: '' }]
+                : [{ id: Date.now(), startDate: '', startTime: '', endDate: '', endTime: '' }];
 
-            setSpecificSlots(mapped)
+            setSpecificSlots(mapped);
         }
 
         if (String(initialSpot.availabilityType || '').toUpperCase() === 'RECURRING') {
-            const rec = Array.isArray(initialSpot.recurringSchedule) ? initialSpot.recurringSchedule : []
+            const rec = Array.isArray(initialSpot.recurringSchedule) ? initialSpot.recurringSchedule : [];
             const base = {
                 0: { active: false, start: '', end: '' },
                 1: { active: false, start: '', end: '' },
@@ -104,33 +106,39 @@ const CreateParkingPage = ({ onClose, onCreated, onUpdated, mode = 'create', ini
                 4: { active: false, start: '', end: '' },
                 5: { active: false, start: '', end: '' },
                 6: { active: false, start: '', end: '' },
-            }
+            };
 
             for (const r of rec) {
-                const d = Number(r.dayOfWeek)
-                if (!Number.isFinite(d) || d < 0 || d > 6) continue
+                const d = Number(r.dayOfWeek);
+                if (!Number.isFinite(d) || d < 0 || d > 6) continue;
                 base[d] = {
                     active: true,
                     start: normalizeTimeHHMM(r.start),
                     end: normalizeTimeHHMM(r.end),
-                }
+                };
             }
 
-            setWeeklySchedule(base)
+            setWeeklySchedule(base);
         }
-    }, [mode, initialSpot])
+    }, [mode, initialSpot]);
 
     const timeOptions = useMemo(() => generateTimeOptions(30), []);
 
     const getCurrentTimeHHMM = () => {
         const now = new Date();
-        return `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
+        return `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
     };
 
     const validationErrors = useMemo(() => {
         const errors = [];
-        if (!formData.lat || !formData.lng) errors.push("Please select a precise location from the list.");
-        if (!formData.pricePerHour || parseFloat(formData.pricePerHour) <= 0) errors.push("Price per hour must be greater than 0.");
+
+        if (formData.lat == null || formData.lng == null) {
+            errors.push("Please choose a location by searching an address or using the map pin.");
+        }
+
+        if (!formData.pricePerHour || parseFloat(formData.pricePerHour) <= 0) {
+            errors.push("Price per hour must be greater than 0.");
+        }
 
         if (availabilityType === 'specific') {
             const invalidSlots = specificSlots.some(s => !s.startDate || !s.endDate || !s.startTime || !s.endTime);
@@ -143,6 +151,7 @@ const CreateParkingPage = ({ onClose, onCreated, onUpdated, mode = 'create', ini
                 errors.push("Please set start and end times for all selected days.");
             }
         }
+
         return errors;
     }, [formData, availabilityType, specificSlots, weeklySchedule]);
 
@@ -174,6 +183,7 @@ const CreateParkingPage = ({ onClose, onCreated, onUpdated, mode = 'create', ini
 
     const handleAddressSelect = ({ lat, lng, address, address_components }) => {
         setApiMessage('');
+
         if (address_components) {
             const hasStreetNumber = address_components.some(component => component.types.includes('street_number'));
             if (!hasStreetNumber) {
@@ -182,9 +192,103 @@ const CreateParkingPage = ({ onClose, onCreated, onUpdated, mode = 'create', ini
                 return;
             }
         }
+
         setFormData(prev => ({ ...prev, lat, lng, location: address }));
     };
 
+    const handleMapSelect = ({ lat, lng }) => {
+        setApiMessage('');
+        setPendingPin({ lat, lng });
+    };
+    const reverseGeocode = (lat, lng) => {
+        return new Promise((resolve) => {
+            if (!window.google?.maps?.Geocoder) {
+                resolve(null);
+                return;
+            }
+
+            const geocoder = new window.google.maps.Geocoder();
+
+            geocoder.geocode(
+                { location: { lat, lng } },
+                (results, status) => {
+                    if (status === 'OK' && results && results.length > 0) {
+                        resolve(results[0].formatted_address);
+                    } else {
+                        resolve(null);
+                    }
+                }
+            );
+        });
+    };
+    const handleUseMyLocation = () => {
+        setApiMessage('');
+
+        if (!navigator.geolocation) {
+            setApiMessage('Geolocation is not supported by your browser.');
+            return;
+        }
+
+        navigator.geolocation.getCurrentPosition(
+            async (position) => {
+                const lat = position.coords.latitude;
+                const lng = position.coords.longitude;
+
+                const address = await reverseGeocode(lat, lng);
+
+                setFormData(prev => ({
+                    ...prev,
+                    lat,
+                    lng,
+                    location: address || `My current location (${lat.toFixed(5)}, ${lng.toFixed(5)})`,
+                }));
+
+                setPendingPin(null);
+                setLocationInputMode('search');
+                setApiMessage('Current location selected.');
+            },
+            (error) => {
+                switch (error.code) {
+                    case 1:
+                        setApiMessage('Location access denied.');
+                        break;
+                    case 2:
+                        setApiMessage('Location unavailable.');
+                        break;
+                    case 3:
+                        setApiMessage('Location request timed out.');
+                        break;
+                    default:
+                        setApiMessage('Failed to get your current location.');
+                }
+            },
+            {
+                enableHighAccuracy: true,
+                timeout: 10000,
+                maximumAge: 0,
+            }
+        );
+    };
+    const handleConfirmPinnedLocation = async () => {
+        if (!pendingPin) return;
+
+        const { lat, lng } = pendingPin;
+        const address = await reverseGeocode(lat, lng);
+
+        setFormData(prev => ({
+            ...prev,
+            lat,
+            lng,
+            location: address || `Pinned location (${lat.toFixed(5)}, ${lng.toFixed(5)})`,
+        }));
+        setPendingPin(null);
+        setLocationInputMode('search');
+        setApiMessage('Location selected from map.');
+    };
+
+    const handleCancelPinnedLocation = () => {
+        setPendingPin(null);
+    };
     const handleChange = (e) => {
         const { name, value, type, checked } = e.target;
         setFormData(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
@@ -261,6 +365,7 @@ const CreateParkingPage = ({ onClose, onCreated, onUpdated, mode = 'create', ini
             setApiMessage('Please select valid Quick Apply times first.');
             return;
         }
+
         setWeeklySchedule(prev => {
             const newState = { ...prev };
             Object.keys(newState).forEach(key => {
@@ -290,7 +395,6 @@ const CreateParkingPage = ({ onClose, onCreated, onUpdated, mode = 'create', ini
 
             let payload = {
                 location: formData.location,
-
                 description: formData.description ? formData.description.trim() : null,
                 lat: formData.lat,
                 lng: formData.lng,
@@ -308,37 +412,37 @@ const CreateParkingPage = ({ onClose, onCreated, onUpdated, mode = 'create', ini
             } else {
                 const scheduleList = Object.keys(weeklySchedule)
                     .map((key) => {
-                        const dayOfWeek = parseInt(key)
-                        const d = weeklySchedule[key]
-                        if (!d.active) return null
+                        const dayOfWeek = parseInt(key);
+                        const d = weeklySchedule[key];
+                        if (!d.active) return null;
                         return {
                             dayOfWeek,
                             start: d.start,
                             end: d.end,
-                        }
+                        };
                     })
-                    .filter(Boolean)
-                payload.recurringSchedule = scheduleList
+                    .filter(Boolean);
+                payload.recurringSchedule = scheduleList;
             }
 
-            const API_BASE = API_BASE_URL
+            const API_BASE = API_BASE_URL;
 
             if (mode === 'edit') {
-                if (!initialSpot?.id) throw new Error('Missing spot id for edit.')
+                if (!initialSpot?.id) throw new Error('Missing spot id for edit.');
 
                 await axios.put(`${API_BASE}/api/parking-spots/${initialSpot.id}`, payload, {
                     headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
-                })
+                });
 
-                setApiMessage('Success! Parking spot updated.')
-                setTimeout(() => { onUpdated?.(); onClose?.(); }, 700)
+                setApiMessage('Success! Parking spot updated.');
+                setTimeout(() => { onUpdated?.(); onClose?.(); }, 700);
             } else {
                 await axios.post(`${API_BASE}/api/parking-spots`, payload, {
                     headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
-                })
+                });
 
-                setApiMessage('Success! Parking spot created.')
-                setTimeout(() => { onCreated?.(); onClose?.(); }, 700)
+                setApiMessage('Success! Parking spot created.');
+                setTimeout(() => { onCreated?.(); onClose?.(); }, 700);
             }
 
         } catch (error) {
@@ -419,15 +523,169 @@ const CreateParkingPage = ({ onClose, onCreated, onUpdated, mode = 'create', ini
                         </>
                     ) : (
                         <>
-                            <AddressAutocomplete
-                                onAddressSelect={handleAddressSelect}
-                                options={{ types: ['address'], componentRestrictions: { country: 'il' } }}
-                            />
-                            {formData.location && formData.lat && (
-                                <div style={{ marginTop: '8px', fontSize: '13px', color: '#10b981', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                    <span>📍</span> {formData.location}
+                            <div style={{ display: 'flex', gap: '10px', marginBottom: '12px' }}>
+                                <button
+                                    type="button"
+                                    onClick={() => setLocationInputMode('search')}
+                                    style={locationInputMode === 'search' ? activeTabStyle : inactiveTabStyle}
+                                >
+                                    Search Address
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={() => setLocationInputMode('map')}
+                                    style={locationInputMode === 'map' ? activeTabStyle : inactiveTabStyle}
+                                >
+                                    Pick on Map
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={handleUseMyLocation}
+                                    style={inactiveTabStyle}
+                                >
+                                    Use My Location
+                                </button>
+                            </div>
+
+                            {locationInputMode === 'search' && (
+                                <AddressAutocomplete
+                                    onAddressSelect={handleAddressSelect}
+                                    options={{ types: ['address'], componentRestrictions: { country: 'il' } }}
+                                />
+                            )}
+
+                            {locationInputMode === 'map' && (
+                                <div style={{ marginTop: '12px' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                                        <div style={{ fontSize: '13px', color: '#64748b' }}>
+                                            Click on the map to place the parking spot pin
+                                        </div>
+
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setLocationInputMode('search');
+                                                setPendingPin(null);
+                                            }}
+                                            style={{
+                                                border: '1px solid #e2e8f0',
+                                                background: '#fff',
+                                                color: '#475569',
+                                                borderRadius: '8px',
+                                                padding: '8px 12px',
+                                                fontSize: '13px',
+                                                fontWeight: '600',
+                                                cursor: 'pointer'
+                                            }}
+                                        >
+                                            ← Back
+                                        </button>
+                                    </div>
+
+                                    <div
+                                        style={{
+                                            position: 'relative',
+                                            width: '100%',
+                                            height: '280px',
+                                            borderRadius: '12px',
+                                            overflow: 'hidden',
+                                            border: '1px solid #e2e8f0',
+                                        }}
+                                    >
+                                        <MapComponent
+                                            spots={[]}
+                                            center={
+                                                pendingPin
+                                                    ? { lat: Number(pendingPin.lat), lng: Number(pendingPin.lng) }
+                                                    : formData.lat != null && formData.lng != null
+                                                        ? { lat: Number(formData.lat), lng: Number(formData.lng) }
+                                                        : { lat: 32.0853, lng: 34.7818 }
+                                            }
+                                            zoom={13}
+                                            selectable={true}
+                                            selectedPosition={
+                                                pendingPin
+                                                    ? { lat: Number(pendingPin.lat), lng: Number(pendingPin.lng) }
+                                                    : formData.lat != null && formData.lng != null
+                                                        ? { lat: Number(formData.lat), lng: Number(formData.lng) }
+                                                        : null
+                                            }
+                                            onMapSelect={handleMapSelect}
+                                        />
+                                    </div>
+                                    {pendingPin && (
+                                        <div
+                                            style={{
+                                                marginTop: '12px',
+                                                padding: '14px',
+                                                border: '1px solid #e2e8f0',
+                                                borderRadius: '12px',
+                                                backgroundColor: '#f8fafc',
+                                            }}
+                                        >
+                                            <div style={{ fontSize: '14px', fontWeight: '600', color: '#0f172a', marginBottom: '6px' }}>
+                                                Selected pin location
+                                            </div>
+
+                                            <div style={{ fontSize: '13px', color: '#475569', marginBottom: '12px', lineHeight: '1.5' }}>
+                                                Lat: {pendingPin.lat.toFixed(6)}<br />
+                                                Lng: {pendingPin.lng.toFixed(6)}
+                                            </div>
+
+                                            <div style={{ display: 'flex', gap: '10px' }}>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setPendingPin(null);
+                                                    }}
+                                                    style={{
+                                                        flex: 1,
+                                                        padding: '10px 12px',
+                                                        backgroundColor: '#fff',
+                                                        color: '#64748b',
+                                                        border: '1px solid #e2e8f0',
+                                                        borderRadius: '10px',
+                                                        fontWeight: '600',
+                                                        cursor: 'pointer'
+                                                    }}
+                                                >
+                                                    Choose another spot
+                                                </button>
+
+                                                <button
+                                                    type="button"
+                                                    onClick={handleConfirmPinnedLocation}
+                                                    style={{
+                                                        flex: 1,
+                                                        padding: '10px 12px',
+                                                        backgroundColor: '#0f172a',
+                                                        color: '#fff',
+                                                        border: 'none',
+                                                        borderRadius: '10px',
+                                                        fontWeight: '600',
+                                                        cursor: 'pointer'
+                                                    }}
+                                                >
+                                                    Use this location
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+
+                            )}
+
+                            {formData.lat != null && formData.lng != null && (
+                                <div style={{ marginTop: '8px', fontSize: '13px', color: '#10b981', display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap' }}>
+                                    <span>📍</span>
+                                    {formData.location
+                                        ? formData.location
+                                        : `Pinned location selected (${Number(formData.lat).toFixed(5)}, ${Number(formData.lng).toFixed(5)})`}
                                 </div>
                             )}
+
                             {apiMessage && apiMessage.includes('precise') && (
                                 <div style={{ marginTop: '5px', fontSize: '13px', color: '#ef4444', fontWeight: 'bold' }}>
                                     {apiMessage}
@@ -436,7 +694,6 @@ const CreateParkingPage = ({ onClose, onCreated, onUpdated, mode = 'create', ini
                         </>
                     )}
                 </div>
-
 
                 <div style={{ ...groupStyle, marginTop: '12px' }}>
                     <label style={labelStyle}>Description (Optional, up to 80 chars)</label>
@@ -454,18 +711,56 @@ const CreateParkingPage = ({ onClose, onCreated, onUpdated, mode = 'create', ini
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '24px', marginTop: '12px' }}>
                     <div style={groupStyle}>
                         <label style={labelStyle}>Price / Hour</label>
-                        <div style={{...inputWrapperStyle, padding: '0 8px'}}>
-                            <button type="button" onClick={() => { const newVal = parseFloat(formData.pricePerHour || 0) - 0.5; if (newVal >= 0) handleChange({ target: { name: 'pricePerHour', value: newVal } }); }} style={stepperBtnStyle}>−</button>
+                        <div style={{ ...inputWrapperStyle, padding: '0 8px' }}>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    const newVal = parseFloat(formData.pricePerHour || 0) - 0.5;
+                                    if (newVal >= 0) handleChange({ target: { name: 'pricePerHour', value: newVal } });
+                                }}
+                                style={stepperBtnStyle}
+                            >
+                                −
+                            </button>
+
                             <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '2px' }}>
-                                <input type="number" name="pricePerHour" value={formData.pricePerHour} onChange={handleChange} placeholder="0" style={{ ...inputStyle, border: 'none', textAlign: 'right', fontSize: '18px', fontWeight: 'bold', width: '45px', padding: 0, backgroundColor: 'transparent' }} />
+                                <input
+                                    type="number"
+                                    name="pricePerHour"
+                                    value={formData.pricePerHour}
+                                    onChange={handleChange}
+                                    placeholder="0"
+                                    style={{ ...inputStyle, border: 'none', textAlign: 'right', fontSize: '18px', fontWeight: 'bold', width: '45px', padding: 0, backgroundColor: 'transparent' }}
+                                />
                                 <span style={{ fontSize: '16px', fontWeight: 'bold', color: '#64748b' }}>₪</span>
                             </div>
-                            <button type="button" onClick={() => { const newVal = (parseFloat(formData.pricePerHour) || 0) + 0.5; handleChange({ target: { name: 'pricePerHour', value: newVal } }); }} style={stepperBtnStyle}>+</button>
+
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    const newVal = (parseFloat(formData.pricePerHour) || 0) + 0.5;
+                                    handleChange({ target: { name: 'pricePerHour', value: newVal } });
+                                }}
+                                style={stepperBtnStyle}
+                            >
+                                +
+                            </button>
                         </div>
                     </div>
+
                     <div style={groupStyle}>
                         <label style={labelStyle}>Features</label>
-                        <div onClick={() => setFormData(prev => ({ ...prev, covered: !prev.covered }))} style={{ ...inputWrapperStyle, justifyContent: 'space-between', padding: '0 15px', cursor: 'pointer', borderColor: formData.covered ? '#3b82f6' : '#e2e8f0', backgroundColor: formData.covered ? '#eff6ff' : '#fff' }}>
+                        <div
+                            onClick={() => setFormData(prev => ({ ...prev, covered: !prev.covered }))}
+                            style={{
+                                ...inputWrapperStyle,
+                                justifyContent: 'space-between',
+                                padding: '0 15px',
+                                cursor: 'pointer',
+                                borderColor: formData.covered ? '#3b82f6' : '#e2e8f0',
+                                backgroundColor: formData.covered ? '#eff6ff' : '#fff'
+                            }}
+                        >
                             <span style={{ fontSize: '14px', fontWeight: '500', color: formData.covered ? '#1d4ed8' : '#64748b' }}>Covered</span>
                             <div style={{ width: '36px', height: '20px', backgroundColor: formData.covered ? '#3b82f6' : '#cbd5e1', borderRadius: '20px', position: 'relative', transition: 'all 0.2s' }}>
                                 <div style={{ width: '16px', height: '16px', backgroundColor: 'white', borderRadius: '50%', position: 'absolute', top: '2px', left: formData.covered ? '18px' : '2px', transition: 'all 0.2s', boxShadow: '0 1px 2px rgba(0,0,0,0.2)' }} />
@@ -481,7 +776,10 @@ const CreateParkingPage = ({ onClose, onCreated, onUpdated, mode = 'create', ini
 
                 {availabilityType === 'specific' && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-                        <div style={{fontSize: '13px', color: '#64748b', marginBottom: '5px'}}>Set the start and end time for when the parking is available.</div>
+                        <div style={{ fontSize: '13px', color: '#64748b', marginBottom: '5px' }}>
+                            Set the start and end time for when the parking is available.
+                        </div>
+
                         {specificSlots.map((slot) => {
                             const validEndTimes = getValidEndTimes(slot.startDate, slot.endDate, slot.startTime);
                             const isCurrentEndTimeValid = !slot.endTime || validEndTimes.includes(slot.endTime);
@@ -489,8 +787,9 @@ const CreateParkingPage = ({ onClose, onCreated, onUpdated, mode = 'create', ini
 
                             return (
                                 <div key={slot.id} style={{ display: 'grid', gridTemplateColumns: '1fr 20px 1fr auto', gap: '10px', alignItems: 'center', backgroundColor: '#f8fafc', padding: '12px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-                                    <div style={{display: 'flex', flexDirection: 'column', gap: '5px'}}>
-                                        <span style={{...subLabelStyle, color: '#166534'}}>FROM (Start)</span>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                                        <span style={{ ...subLabelStyle, color: '#166534' }}>FROM (Start)</span>
+
                                         <DatePicker
                                             selected={slot.startDate ? new Date(`${slot.startDate}T00:00:00`) : null}
                                             onChange={(d) => updateSpecificSlot(slot.id, 'startDate', d ? toYMD(d) : '')}
@@ -509,11 +808,13 @@ const CreateParkingPage = ({ onClose, onCreated, onUpdated, mode = 'create', ini
                                             disabled={!slot.startDate}
                                             maxVisible={5}
                                         />
-
                                     </div>
+
                                     <div style={{ textAlign: 'center', color: '#cbd5e1', fontSize: '18px' }}>➝</div>
-                                    <div style={{display: 'flex', flexDirection: 'column', gap: '5px'}}>
-                                        <span style={{...subLabelStyle, color: '#991b1b'}}>TO (End)</span>
+
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                                        <span style={{ ...subLabelStyle, color: '#991b1b' }}>TO (End)</span>
+
                                         <DatePicker
                                             selected={slot.endDate ? new Date(`${slot.endDate}T00:00:00`) : null}
                                             onChange={(d) => updateSpecificSlot(slot.id, 'endDate', d ? toYMD(d) : '')}
@@ -532,29 +833,57 @@ const CreateParkingPage = ({ onClose, onCreated, onUpdated, mode = 'create', ini
                                             disabled={!slot.startDate || !slot.endDate || !slot.startTime}
                                             maxVisible={5}
                                         />
-
                                     </div>
-                                    {specificSlots.length > 1 && <button type="button" onClick={() => removeSpecificSlot(slot.id)} style={removeBtnStyle}>&times;</button>}
+
+                                    {specificSlots.length > 1 && (
+                                        <button type="button" onClick={() => removeSpecificSlot(slot.id)} style={removeBtnStyle}>
+                                            &times;
+                                        </button>
+                                    )}
                                 </div>
                             );
                         })}
-                        <button type="button" onClick={addSpecificSlot} style={addBtnStyle}>+ Add Another Range</button>
+
+                        <button type="button" onClick={addSpecificSlot} style={addBtnStyle}>
+                            + Add Another Range
+                        </button>
                     </div>
                 )}
 
                 {availabilityType === 'recurring' && (
                     <div>
                         <label style={labelStyle}>Select Days</label>
+
                         <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', justifyContent: 'center' }}>
                             {daysLabels.map((dayLabel, index) => (
-                                <button key={index} type="button" onClick={() => toggleDay(index)} style={{ width: '42px', height: '42px', borderRadius: '12px', border: 'none', backgroundColor: weeklySchedule[index].active ? '#2563eb' : '#f1f5f9', color: weeklySchedule[index].active ? 'white' : '#64748b', fontWeight: '700', cursor: 'pointer', transition: 'all 0.2s', boxShadow: weeklySchedule[index].active ? '0 4px 12px rgba(37, 99, 235, 0.2)' : 'none' }}>{dayLabel}</button>
+                                <button
+                                    key={index}
+                                    type="button"
+                                    onClick={() => toggleDay(index)}
+                                    style={{
+                                        width: '42px',
+                                        height: '42px',
+                                        borderRadius: '12px',
+                                        border: 'none',
+                                        backgroundColor: weeklySchedule[index].active ? '#2563eb' : '#f1f5f9',
+                                        color: weeklySchedule[index].active ? 'white' : '#64748b',
+                                        fontWeight: '700',
+                                        cursor: 'pointer',
+                                        transition: 'all 0.2s',
+                                        boxShadow: weeklySchedule[index].active ? '0 4px 12px rgba(37, 99, 235, 0.2)' : 'none'
+                                    }}
+                                >
+                                    {dayLabel}
+                                </button>
                             ))}
                         </div>
+
                         <div style={{ backgroundColor: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1px dashed #cbd5e1', marginBottom: '20px' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
                                 <span style={{ fontSize: '13px', fontWeight: '600', color: '#475569' }}>⚡ Quick Apply</span>
                                 <button type="button" onClick={applyBatchTime} style={tinyBtnStyle}>Apply to Selected</button>
                             </div>
+
                             <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
                                 <TimeDropdown
                                     value={batchTime.start}
@@ -574,14 +903,19 @@ const CreateParkingPage = ({ onClose, onCreated, onUpdated, mode = 'create', ini
                                 />
                             </div>
                         </div>
+
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '250px', overflowY: 'auto', paddingRight: '4px' }}>
                             {Object.keys(weeklySchedule).map((key) => {
                                 const dayIndex = parseInt(key);
                                 const dayData = weeklySchedule[dayIndex];
                                 if (!dayData.active) return null;
+
                                 return (
                                     <div key={dayIndex} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px', backgroundColor: '#fff', border: '1px solid #f1f5f9', borderRadius: '8px' }}>
-                                        <div style={{ width: '80px', fontSize: '14px', fontWeight: '600', color: '#334155' }}>{daysFullNames[dayIndex]}</div>
+                                        <div style={{ width: '80px', fontSize: '14px', fontWeight: '600', color: '#334155' }}>
+                                            {daysFullNames[dayIndex]}
+                                        </div>
+
                                         <TimeDropdown
                                             value={dayData.start}
                                             onChange={(v) => updateDayTime(dayIndex, 'start', v)}
@@ -589,7 +923,9 @@ const CreateParkingPage = ({ onClose, onCreated, onUpdated, mode = 'create', ini
                                             placeholder="--:--"
                                             maxVisible={5}
                                         />
+
                                         <span style={{ color: '#cbd5e1' }}>-</span>
+
                                         <TimeDropdown
                                             value={dayData.end}
                                             onChange={(v) => updateDayTime(dayIndex, 'end', v)}
@@ -607,7 +943,9 @@ const CreateParkingPage = ({ onClose, onCreated, onUpdated, mode = 'create', ini
 
                 {validationErrors.length > 0 && (
                     <div style={{ marginTop: '20px', padding: '12px', backgroundColor: '#fef2f2', borderRadius: '8px', border: '1px solid #fee2e2' }}>
-                        <div style={{ fontSize: '13px', fontWeight: 'bold', color: '#b91c1c', marginBottom: '6px' }}>⚠️ Please fill in missing details:</div>
+                        <div style={{ fontSize: '13px', fontWeight: 'bold', color: '#b91c1c', marginBottom: '6px' }}>
+                            ⚠️ Please fill in missing details:
+                        </div>
                         <ul style={{ margin: 0, paddingLeft: '20px', color: '#b91c1c', fontSize: '12px' }}>
                             {validationErrors.map((err, idx) => <li key={idx} style={{ marginBottom: '2px' }}>{err}</li>)}
                         </ul>
@@ -615,16 +953,39 @@ const CreateParkingPage = ({ onClose, onCreated, onUpdated, mode = 'create', ini
                 )}
 
                 <div style={{ display: 'flex', gap: '12px', marginTop: '20px', paddingTop: '20px', borderTop: '1px solid #f1f5f9' }}>
-                    <button type="button" onClick={onClose} disabled={loading} style={cancelButtonStyle}>Cancel</button>
-                    <button type="submit" disabled={loading || validationErrors.length > 0} style={{ ...submitButtonStyle, opacity: (loading || validationErrors.length > 0) ? 0.5 : 1, cursor: (loading || validationErrors.length > 0) ? 'not-allowed' : 'pointer' }}>
+                    <button type="button" onClick={onClose} disabled={loading} style={cancelButtonStyle}>
+                        Cancel
+                    </button>
+
+                    <button
+                        type="submit"
+                        disabled={loading || validationErrors.length > 0}
+                        style={{
+                            ...submitButtonStyle,
+                            opacity: (loading || validationErrors.length > 0) ? 0.5 : 1,
+                            cursor: (loading || validationErrors.length > 0) ? 'not-allowed' : 'pointer'
+                        }}
+                    >
                         {loading ? 'Creating...' : 'Confirm'}
                     </button>
                 </div>
 
                 {apiMessage && !apiMessage.includes('precise') && (
-                    <div style={{ marginTop: '15px', padding: '10px', textAlign: 'center', borderRadius: '8px', backgroundColor: apiMessage.includes('Success') ? '#dcfce7' : '#fee2e2', color: apiMessage.includes('Success') ? '#166534' : '#991b1b', fontSize: '14px', fontWeight: '500' }}>{apiMessage}</div>
+                    <div style={{
+                        marginTop: '15px',
+                        padding: '10px',
+                        textAlign: 'center',
+                        borderRadius: '8px',
+                        backgroundColor: apiMessage.includes('Success') ? '#dcfce7' : '#fee2e2',
+                        color: apiMessage.includes('Success') ? '#166534' : '#991b1b',
+                        fontSize: '14px',
+                        fontWeight: '500'
+                    }}>
+                        {apiMessage}
+                    </div>
                 )}
             </form>
+
         </div>
     );
 };

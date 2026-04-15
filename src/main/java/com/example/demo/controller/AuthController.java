@@ -98,7 +98,7 @@ public class AuthController {
         try {
             userService.createPasswordResetToken(request.getEmail());
             log.info("action=forgot_password processed email={}", safeEmail(request.getEmail()));
-        } catch (IllegalArgumentException ex) {
+        } catch (Exception ex) {
             // Intentionally do not reveal if email exists
             log.info("action=forgot_password processed email={} note=generic_response", safeEmail(request.getEmail()));
         }

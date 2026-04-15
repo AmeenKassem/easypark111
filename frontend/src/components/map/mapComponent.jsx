@@ -25,7 +25,6 @@ const locateBtnStyle = {
     padding: 0,
 }
 
-
 const secondaryBtnStyle = {
     backgroundColor: '#f8fafc',
     color: '#334155',
@@ -64,7 +63,6 @@ const btnStyleDetails = {
     width: '100%',
     marginBottom: '12px'
 }
-
 
 const btnStyleRequest = {
     backgroundColor: '#2563eb',
@@ -166,13 +164,11 @@ function SpotDetailModal({ spot, onClose }) {
                 />
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-
                     {spot.description && (
                         <div style={infoBoxStyle}>
                             <strong style={{ color: '#0f172a' }}>Description:</strong> {spot.description}
                         </div>
                     )}
-
 
                     {typeof spot.covered === 'boolean' && (
                         <div style={infoBoxStyle}>
@@ -184,7 +180,6 @@ function SpotDetailModal({ spot, onClose }) {
         </div>
     );
 }
-// ----------------------------------------------
 
 export default function MapComponent({
                                          spots = null,
@@ -192,20 +187,20 @@ export default function MapComponent({
                                          zoom = 13,
                                          onSpotClick = null,
                                          currentUserId = null,
-                                         onMapLoad = null
+                                         onMapLoad = null,
+                                         selectable = false,
+                                         selectedPosition = null,
+                                         onMapSelect = null
                                      }) {
-
     const mapRef = useRef(null)
     const [apiSpots, setApiSpots] = useState([])
     const [selectedSpot, setSelectedSpot] = useState(null)
-
-
     const [detailModalSpot, setDetailModalSpot] = useState(null)
-
     const [myLocation, setMyLocation] = useState(null)
     const [mapCenter, setMapCenter] = useState(center)
     const [ratingMessage, setRatingMessage] = useState('')
     const [isSubmittingRating, setIsSubmittingRating] = useState(false)
+
     const { isLoaded, loadError } = useJsApiLoader({
         id: 'easypark-google-maps',
         googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_KEY,
@@ -323,20 +318,24 @@ export default function MapComponent({
             window.open(`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`, '_blank')
         }
     }
+
     const onLoad = (map) => {
         mapRef.current = map
         if (onMapLoad) {
             onMapLoad(map);
         }
+
         setTimeout(() => {
             if (window.google?.maps?.event && mapRef.current) {
                 window.google.maps.event.trigger(mapRef.current, 'resize')
             }
         }, 120)
 
-        setTimeout(() => {
-            handleLocateUser();
-        }, 200);
+        if (!selectable) {
+            setTimeout(() => {
+                handleLocateUser();
+            }, 200);
+        }
     }
 
     const onUnmount = () => {
@@ -357,26 +356,29 @@ export default function MapComponent({
     if (!isLoaded) {
         return <div style={{ position: 'absolute', inset: 0, background: '#fff' }} />
     }
+
     const isMine = Boolean(currentUserId && selectedSpot?.ownerId != null && Number(selectedSpot.ownerId) === Number(currentUserId));
 
     return (
         <div style={{ position: 'absolute', inset: 0 }}>
-            <button
-                onClick={handleLocateUser}
-                style={locateBtnStyle}
-                title="Show Your Location"
-            >
-                <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    height="24px"
-                    viewBox="0 0 24 24"
-                    width="24px"
-                    fill="#444"
+            {!selectable && (
+                <button
+                    onClick={handleLocateUser}
+                    style={locateBtnStyle}
+                    title="Show Your Location"
                 >
-                    <path d="M0 0h24v24H0V0z" fill="none"/>
-                    <path d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm8.94 3c-.46-4.17-3.77-7.48-7.94-7.94V1h-2v2.06C6.83 3.52 3.52 6.83 3.06 11H1v2h2.06c.46 4.17 3.77 7.48 7.94 7.94V23h2v-2.06c4.17-.46 7.48-3.77 7.94-7.94H23v-2h-2.06zM12 19c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z"/>
-                </svg>
-            </button>
+                    <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        height="24px"
+                        viewBox="0 0 24 24"
+                        width="24px"
+                        fill="#444"
+                    >
+                        <path d="M0 0h24v24H0V0z" fill="none"/>
+                        <path d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm8.94 3c-.46-4.17-3.77-7.48-7.94-7.94V1h-2v2.06C6.83 3.52 3.52 6.83 3.06 11H1v2h2.06c.46 4.17 3.77 4.94 7.94 7.94V23h2v-2.06c4.17-.46 7.48-3.77 7.94-7.94H23v-2h-2.06zM12 19c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z"/>
+                    </svg>
+                </button>
+            )}
 
             <GoogleMap
                 mapContainerStyle={containerStyle}
@@ -385,8 +387,15 @@ export default function MapComponent({
                 options={options}
                 onLoad={onLoad}
                 onUnmount={onUnmount}
+                onClick={(e) => {
+                    if (!selectable || !onMapSelect) return;
+                    const lat = e.latLng?.lat();
+                    const lng = e.latLng?.lng();
+                    if (lat == null || lng == null) return;
+                    onMapSelect({ lat, lng });
+                }}
             >
-                {myLocation && (
+                {myLocation && !selectable && (
                     <>
                         <Marker
                             position={myLocation}
@@ -415,7 +424,16 @@ export default function MapComponent({
                     </>
                 )}
 
-                {markerSpots.map((spot) => (
+                {selectable && selectedPosition && (
+                    <Marker
+                        position={{
+                            lat: Number(selectedPosition.lat),
+                            lng: Number(selectedPosition.lng),
+                        }}
+                    />
+                )}
+
+                {!selectable && markerSpots.map((spot) => (
                     <Marker
                         key={spot.id ?? `${spot.lat}-${spot.lng}`}
                         position={{ lat: Number(spot.lat), lng: Number(spot.lng) }}
@@ -426,7 +444,7 @@ export default function MapComponent({
                     />
                 ))}
 
-                {selectedSpot && (
+                {!selectable && selectedSpot && (
                     <InfoWindow
                         position={{ lat: Number(selectedSpot.lat), lng: Number(selectedSpot.lng) }}
                         onCloseClick={() => {
@@ -435,7 +453,7 @@ export default function MapComponent({
                         }}
                     >
                         <div style={{ minWidth: 250 }}>
-                            <h3 style={{ margin: '0 0 10px 0',color: 'black', fontSize: '15px' }}>
+                            <h3 style={{ margin: '0 0 10px 0', color: 'black', fontSize: '15px' }}>
                                 {getObscuredAddress(selectedSpot.location)}
                             </h3>
 
@@ -444,7 +462,6 @@ export default function MapComponent({
                                     <strong>Price:</strong> ₪{selectedSpot.pricePerHour}/hr
                                 </p>
                             )}
-
 
                             <p style={{ margin: '6px 0', color: 'black', fontSize: '13px' }}>
                                 <strong>Rating:</strong>{' '}
@@ -519,10 +536,12 @@ export default function MapComponent({
                 )}
             </GoogleMap>
 
-            <SpotDetailModal
-                spot={detailModalSpot}
-                onClose={() => setDetailModalSpot(null)}
-            />
+            {!selectable && (
+                <SpotDetailModal
+                    spot={detailModalSpot}
+                    onClose={() => setDetailModalSpot(null)}
+                />
+            )}
         </div>
     )
 }
