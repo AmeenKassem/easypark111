@@ -210,7 +210,8 @@ export default function DriverPage() {
 
     const [user, setUser] = useState(getCurrentUser())
     const roles = useMemo(() => new Set(user?.roles ?? []), [user])
-
+    const [spotsListOpen, setSpotsListOpen] = useState(false)
+    const [selectedSpotFromList, setSelectedSpotFromList] = useState(null)
     // Map control
     const mapRef = useRef(null)
 
@@ -412,7 +413,23 @@ export default function DriverPage() {
         }
         if (place.formatted_address) setAddress(place.formatted_address)
     }
+    const focusSpot = (spot) => {
+        if (!spot || spot.lat == null || spot.lng == null) return
 
+        const nextCenter = { lat: spot.lat, lng: spot.lng }
+        setMapCenter(nextCenter)
+
+        if (mapRef.current?.panTo) {
+            mapRef.current.panTo(nextCenter)
+        }
+
+        if (mapRef.current?.setZoom) {
+            mapRef.current.setZoom(17)
+        }
+
+        setSpotsListOpen(false)
+        setSelectedSpotFromList(spot)
+    }
     const onLoadAutocomplete = (au) => setAutocomplete(au)
     const onPlaceChanged = () => {
         isPlaceSelectedRef.current = true
@@ -530,6 +547,7 @@ export default function DriverPage() {
                     spots={filteredSpots}
                     center={mapCenter}
                     currentUserId={user?.id}
+                    selectedSpot={selectedSpotFromList}
                     onSpotClick={(spot) => {
                         setBookingSpot(spot)
                         setBookingOpen(true)
@@ -584,9 +602,26 @@ export default function DriverPage() {
 
                 {/* Footer stats */}
                 <div style={{ position: 'absolute', left: 12, bottom: 18, pointerEvents: 'none' }}>
-                    <div style={{ pointerEvents: 'auto', background: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(10px)', borderRadius: 999, padding: '8px 12px', boxShadow: '0 14px 40px rgba(15, 23, 42, 0.14)', fontWeight: 800, color: '#0f172a' }}>
+                    <button
+                        type="button"
+                        disabled={loading || filteredSpots.length === 0}
+                        onClick={() => setSpotsListOpen(true)}
+                        style={{
+                            pointerEvents: 'auto',
+                            background: 'rgba(255,255,255,0.92)',
+                            backdropFilter: 'blur(10px)',
+                            borderRadius: 999,
+                            padding: '8px 12px',
+                            boxShadow: '0 14px 40px rgba(15, 23, 42, 0.14)',
+                            fontWeight: 800,
+                            color: '#0f172a',
+                            border: 0,
+                            cursor: loading || filteredSpots.length === 0 ? 'default' : 'pointer',
+                            opacity: loading ? 0.7 : 1
+                        }}
+                    >
                         {loading ? 'Loading...' : `${filteredSpots.length} spots found`}
-                    </div>
+                    </button>
                 </div>
 
                 {/* --- FILTERS MODAL (COMPACT & CENTERED) --- */}
@@ -788,7 +823,204 @@ export default function DriverPage() {
 
             <ProfileModal isOpen={isProfileModalOpen} onClose={() => setProfileModalOpen(false)} onUpdateSuccess={(updatedUser) => { const u = updatedUser ?? getCurrentUser(); const nextRoles = new Set(u?.roles ?? []); if (nextRoles.has('OWNER') && !nextRoles.has('DRIVER')) { nav('/owner', { replace: true }); return; } }} />
             <BookParkingModal isOpen={bookingOpen} spot={bookingSpot} onClose={() => setBookingOpen(false)} onBooked={(b) => { const total = b?.totalPrice != null ? `₪${b.totalPrice}` : ''; setBookingToast(`Booking created (#${b?.id}). Status: ${b?.status || 'PENDING'} ${total}`); setTimeout(() => setBookingToast(''), 3500) }} />
+            {spotsListOpen && (
+                <div
+                    style={{
+                        position: 'absolute',
+                        inset: 0,
+                        zIndex: 25000,
+                        pointerEvents: 'auto',
+                        display: 'flex',
+                        alignItems: 'flex-end',
+                        justifyContent: 'center',
+                        padding: '16px'
+                    }}
+                >
+                    {/* Backdrop */}
+                    <button
+                        type="button"
+                        onClick={() => setSpotsListOpen(false)}
+                        style={{
+                            position: 'absolute',
+                            inset: 0,
+                            background: 'rgba(15, 23, 42, 0.45)',
+                            border: 0
+                        }}
+                    />
 
+                    {/* Bottom sheet */}
+                    <div
+                        style={{
+                            position: 'relative',
+                            width: '100%',
+                            maxWidth: '520px',
+                            maxHeight: '70vh',
+                            overflow: 'hidden',
+                            background: '#ffffff',
+                            borderRadius: '22px',
+                            boxShadow: '0 20px 50px rgba(0,0,0,0.22)',
+                            display: 'flex',
+                            flexDirection: 'column'
+                        }}
+                    >
+                        <div
+                            style={{
+                                padding: '18px 18px 14px 18px',
+                                borderBottom: '1px solid #e2e8f0',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between'
+                            }}
+                        >
+                            <div>
+                                <div style={{ fontSize: '20px', fontWeight: 800, color: '#0f172a' }}>
+                                    Found Spots
+                                </div>
+                                <div style={{ fontSize: '14px', color: '#64748b', marginTop: 4 }}>
+                                    {filteredSpots.length} result{filteredSpots.length === 1 ? '' : 's'}
+                                </div>
+                            </div>
+
+                            <button
+                                type="button"
+                                onClick={() => setSpotsListOpen(false)}
+                                style={{
+                                    border: 0,
+                                    background: 'transparent',
+                                    fontSize: '26px',
+                                    lineHeight: 1,
+                                    cursor: 'pointer',
+                                    color: '#94a3b8'
+                                }}
+                            >
+                                &times;
+                            </button>
+                        </div>
+
+                        <div style={{ overflowY: 'auto', padding: '12px' }}>
+                            {filteredSpots.length === 0 ? (
+                                <div
+                                    style={{
+                                        padding: '20px',
+                                        textAlign: 'center',
+                                        color: '#64748b',
+                                        fontWeight: 600
+                                    }}
+                                >
+                                    No spots found.
+                                </div>
+                            ) : (
+                                filteredSpots.map((spot) => {
+                                    const isOwnSpot = Number(spot.ownerId) === Number(user?.id)
+
+                                    return (
+                                        <button
+                                            key={spot.id}
+                                            type="button"
+                                            onClick={() => focusSpot(spot)}
+                                            style={{
+                                                width: '100%',
+                                                textAlign: 'left',
+                                                border: '1px solid #e2e8f0',
+                                                borderRadius: '16px',
+                                                background: '#fff',
+                                                padding: '14px',
+                                                marginBottom: '10px',
+                                                cursor: 'pointer',
+                                                boxShadow: '0 4px 12px rgba(15, 23, 42, 0.05)'
+                                            }}
+                                        >
+                                            <div
+                                                style={{
+                                                    display: 'flex',
+                                                    alignItems: 'start',
+                                                    justifyContent: 'space-between',
+                                                    gap: '12px'
+                                                }}
+                                            >
+                                                <div style={{ flex: 1, minWidth: 0 }}>
+                                                    <div
+                                                        style={{
+                                                            fontWeight: 800,
+                                                            color: '#0f172a',
+                                                            fontSize: '15px',
+                                                            marginBottom: 6
+                                                        }}
+                                                    >
+                                                        {spot.location || 'Unnamed parking spot'}
+                                                    </div>
+
+                                                    <div
+                                                        style={{
+                                                            display: 'flex',
+                                                            flexWrap: 'wrap',
+                                                            gap: '8px',
+                                                            marginBottom: isOwnSpot ? '8px' : 0
+                                                        }}
+                                                    >
+                        <span
+                            style={{
+                                fontSize: '13px',
+                                fontWeight: 700,
+                                color: '#2563eb',
+                                background: '#eff6ff',
+                                padding: '5px 9px',
+                                borderRadius: '999px'
+                            }}
+                        >
+                            ₪{spot.pricePerHour}/hour
+                        </span>
+
+                                                        <span
+                                                            style={{
+                                                                fontSize: '13px',
+                                                                fontWeight: 700,
+                                                                color: spot.covered ? '#166534' : '#92400e',
+                                                                background: spot.covered ? '#dcfce7' : '#fef3c7',
+                                                                padding: '5px 9px',
+                                                                borderRadius: '999px'
+                                                            }}
+                                                        >
+                            {spot.covered ? 'Covered' : 'Uncovered'}
+                        </span>
+                                                    </div>
+
+                                                    {isOwnSpot && (
+                                                        <div
+                                                            style={{
+                                                                fontSize: '13px',
+                                                                fontWeight: 700,
+                                                                color: '#b91c1c',
+                                                                background: '#fee2e2',
+                                                                padding: '8px 10px',
+                                                                borderRadius: '10px',
+                                                                display: 'inline-block'
+                                                            }}
+                                                        >
+                                                            This parking spot is yours
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                <div
+                                                    style={{
+                                                        alignSelf: 'center',
+                                                        color: '#94a3b8',
+                                                        fontSize: '20px',
+                                                        fontWeight: 700
+                                                    }}
+                                                >
+                                                    ›
+                                                </div>
+                                            </div>
+                                        </button>
+                                    )
+                                })
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
             {bookingToast && ( <div style={{ position: 'absolute', left: 12, right: 12, bottom: 80, zIndex: 50000, pointerEvents: 'none' }}> <div style={{ pointerEvents: 'auto', background: 'rgba(255,255,255,0.96)', border: '1px solid rgba(15,23,42,0.12)', borderRadius: 14, padding: 12, boxShadow: '0 14px 40px rgba(15, 23, 42, 0.14)', fontWeight: 900, color: '#0f172a' }}>{bookingToast}</div></div>)}
         </div>
     )

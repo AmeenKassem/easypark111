@@ -190,7 +190,8 @@ export default function MapComponent({
                                          onMapLoad = null,
                                          selectable = false,
                                          selectedPosition = null,
-                                         onMapSelect = null
+                                         onMapSelect = null,
+                                         selectedSpot: externallySelectedSpot = null
                                      }) {
     const mapRef = useRef(null)
     const [apiSpots, setApiSpots] = useState([])
@@ -229,7 +230,19 @@ export default function MapComponent({
 
         fetchSpots()
     }, [spots])
+    useEffect(() => {
+        if (!externallySelectedSpot) return
 
+        setRatingMessage('')
+        setSelectedSpot(externallySelectedSpot)
+
+        if (mapRef.current) {
+            mapRef.current.panTo({
+                lat: Number(externallySelectedSpot.lat),
+                lng: Number(externallySelectedSpot.lng),
+            })
+        }
+    }, [externallySelectedSpot])
     const handleLocateUser = () => {
         if (!navigator.geolocation) {
             alert("Geolocation is not supported by your browser.");
