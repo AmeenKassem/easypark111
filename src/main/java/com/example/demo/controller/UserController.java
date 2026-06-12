@@ -1,6 +1,7 @@
 package com.example.demo.controller;
 
 import com.example.demo.dto.AuthResponse;
+import com.example.demo.dto.BitQrUploadResponse;
 import com.example.demo.dto.UpdateUserProfileRequest;
 import com.example.demo.dto.UpdateUserRoleRequest;
 import com.example.demo.dto.UserSummary;
@@ -14,6 +15,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import com.example.demo.dto.ChangePasswordRequest;
@@ -88,15 +90,15 @@ public class UserController {
 
         // 1. Update the profile in DB
         UserSummary updatedSummary = userService.updateProfile(userId, req);
-        
+
         // 2. Fetch the full user entity to generate a new token
         User userEntity = userService.getUserEntity(userId);
-        
+
         // 3. Generate a fresh token with updated claims (e.g. name, email)
         String newToken = jwtService.generateToken(userEntity);
 
         log.info("action=user_update_me success userId={} token_refreshed=true", userId);
-        
+
         // 4. Return the new token to the client
         return ResponseEntity.ok(new AuthResponse("Profile updated successfully", newToken, updatedSummary));
     }
@@ -121,17 +123,31 @@ public class UserController {
 
         // 1. Update the role in DB
         UserSummary updatedSummary = userService.updateRole(userId, req);
-        
+
         // 2. Fetch the full user entity to generate a new token
         User userEntity = userService.getUserEntity(userId);
-        
+
         // 3. Generate a fresh token with the NEW ROLE in claims
         String newToken = jwtService.generateToken(userEntity);
 
         log.info("action=user_update_role success userId={} role={} token_refreshed=true", userId, updatedSummary.getRole());
-        
+
         // 4. Return the new token to the client
         return ResponseEntity.ok(new AuthResponse("Role updated successfully", newToken, updatedSummary));
+    }
+
+
+    @PostMapping("/me/bit-qr")
+    public ResponseEntity<BitQrUploadResponse> uploadMyBitQr(Authentication auth,
+                                                             @RequestParam("file") MultipartFile file) {
+        Long userId = currentUserId(auth);
+        log.info("action=user_upload_bit_qr start userId={}", userId);
+
+        BitQrUploadResponse out = userService.uploadBitQr(userId, file);
+
+        log.info("action=user_upload_bit_qr success userId={} hasPaymentUrl={}",
+                userId, out.getBitPaymentUrl() != null);
+        return ResponseEntity.ok(out);
     }
 
     @GetMapping

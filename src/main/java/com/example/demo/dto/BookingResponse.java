@@ -24,6 +24,8 @@ public class BookingResponse {
     private Double totalPrice;
 
     private String ownerPhone;
+    private String ownerBitQrImageUrl;
+    private String ownerBitPaymentUrl;
 
     public static BookingResponse from(Booking b) {
         BookingResponse r = new BookingResponse();
@@ -47,6 +49,8 @@ public class BookingResponse {
         r.status = (b.getStatus() != null) ? b.getStatus().name() : null;
         r.totalPrice = b.getTotalPrice();
         r.ownerPhone = b.getOwnerPhone();
+        r.ownerBitQrImageUrl = b.getOwnerBitQrImageUrl();
+        r.ownerBitPaymentUrl = b.getOwnerBitPaymentUrl();
 
         // Pass the transient field
         r.isRatedByOwner = b.getRatedByOwner() != null ? b.getRatedByOwner() : false;
@@ -68,4 +72,6 @@ public class BookingResponse {
     public Double getParkingLat() { return parkingLat; }
     public Double getParkingLng() { return parkingLng; }
     public String getOwnerPhone() { return ownerPhone; }
+    public String getOwnerBitQrImageUrl() { return ownerBitQrImageUrl; }
+    public String getOwnerBitPaymentUrl() { return ownerBitPaymentUrl; }
 }

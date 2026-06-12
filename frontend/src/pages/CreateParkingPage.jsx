@@ -497,7 +497,6 @@ const CreateParkingPage = ({ onClose, onCreated, onUpdated, mode = 'create', ini
                 <h2 style={{ margin: 0, fontWeight: '800', fontSize: '24px' }}>
                     {mode === 'edit' ? 'Edit Spot Availability' : 'Add New Spot'}
                 </h2>
-                <button type="button" onClick={onClose} style={{ border: 'none', background: 'none', fontSize: '24px', cursor: 'pointer', color: '#94a3b8' }}>&times;</button>
             </div>
 
             <form onSubmit={handleSubmit}>

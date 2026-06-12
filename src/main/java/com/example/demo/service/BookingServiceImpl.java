@@ -9,6 +9,7 @@ import com.example.demo.repository.ParkingRepository;
 import com.example.demo.repository.UserRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Duration;
@@ -26,6 +27,7 @@ public class BookingServiceImpl implements BookingService {
     private final ParkingRepository parkingRepository;
     private final UserRepository userRepository;
     private final DriverRatingRepository driverRatingRepository; // NEW
+    private final NotificationService notificationService;
 
     private static final EnumSet<BookingStatus> ACTIVE_STATUSES =
             EnumSet.of(BookingStatus.PENDING, BookingStatus.APPROVED);
@@ -33,14 +35,17 @@ public class BookingServiceImpl implements BookingService {
     public BookingServiceImpl(BookingRepository bookingRepository,
                               ParkingRepository parkingRepository,
                               UserRepository userRepository,
-                              DriverRatingRepository driverRatingRepository) { // NEW
+                              DriverRatingRepository driverRatingRepository,
+                              NotificationService notificationService) { // NEW
         this.bookingRepository = bookingRepository;
         this.parkingRepository = parkingRepository;
         this.userRepository = userRepository;
         this.driverRatingRepository = driverRatingRepository; // NEW
+        this.notificationService = notificationService;
     }
 
     @Override
+    @Transactional
     public Booking create(Long driverId, CreateBookingRequest req) {
         if (req.getStartTime() == null || req.getEndTime() == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "startTime and endTime are required");
@@ -84,7 +89,23 @@ public class BookingServiceImpl implements BookingService {
         booking.setStatus(BookingStatus.PENDING);
         booking.setTotalPrice(calculateTotalPrice(parking, req.getStartTime(), req.getEndTime()));
 
-        return bookingRepository.save(booking);
+        Booking saved = bookingRepository.save(booking);
+
+        // Notify the parking owner about the new booking request. Tagged as a
+        // BOOKING_REQUEST and linked to the booking so the owner can approve/reject
+        // straight from the notification item.
+        if (parking.getOwnerId() != null) {
+            notificationService.createNotification(
+                    parking.getOwnerId(),
+                    "New Booking Request",
+                    String.format("%s requested your parking spot at %s.",
+                            driver.getFullName(), parking.getLocation()),
+                    Notification.TYPE_BOOKING_REQUEST,
+                    saved.getId()
+            );
+        }
+
+        return saved;
     }
 
     private void validateParkingAvailability(Parking parking, LocalDateTime start, LocalDateTime end) {
@@ -152,6 +173,8 @@ public class BookingServiceImpl implements BookingService {
                 Long ownerId = booking.getParking().getOwnerId();
                 userRepository.findById(ownerId).ifPresent(owner -> {
                     booking.setOwnerPhone(owner.getPhone());
+                    booking.setOwnerBitQrImageUrl(owner.getBitQrImageUrl());
+                    booking.setOwnerBitPaymentUrl(owner.getBitPaymentUrl());
                 });
             }
         }
@@ -177,6 +200,7 @@ public class BookingServiceImpl implements BookingService {
     }
 
     @Override
+    @Transactional
     public Booking updateStatus(Long ownerId, Long bookingId, UpdateBookingStatusRequest req) {
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Booking not found"));
@@ -196,10 +220,29 @@ public class BookingServiceImpl implements BookingService {
         }
 
         booking.setStatus(newStatus);
-        return bookingRepository.save(booking);
+        Booking saved = bookingRepository.save(booking);
+
+        // Notify the driver that their request was approved/rejected.
+        String location = saved.getParking().getLocation();
+        if (newStatus == BookingStatus.APPROVED) {
+            notificationService.createNotification(
+                    saved.getDriver().getId(),
+                    "Booking Approved",
+                    "Your booking request for " + location + " has been approved."
+            );
+        } else {
+            notificationService.createNotification(
+                    saved.getDriver().getId(),
+                    "Booking Rejected",
+                    "Your booking request for " + location + " has been rejected."
+            );
+        }
+
+        return saved;
     }
 
     @Override
+    @Transactional
     public Booking cancel(Long driverId, Long bookingId) {
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Booking not found"));
@@ -208,6 +251,7 @@ public class BookingServiceImpl implements BookingService {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Not allowed to cancel this booking");
         }
 
+        // Already in a terminal state: no-op, and do NOT re-notify the owner.
         if (booking.getStatus() == BookingStatus.CANCELLED || booking.getStatus() == BookingStatus.REJECTED) {
             return booking;
         }
@@ -217,7 +261,20 @@ public class BookingServiceImpl implements BookingService {
         }
 
         booking.setStatus(BookingStatus.CANCELLED);
-        return bookingRepository.save(booking);
+        Booking saved = bookingRepository.save(booking);
+
+        // Notify the parking owner that the driver cancelled.
+        Long ownerId = saved.getParking().getOwnerId();
+        if (ownerId != null) {
+            notificationService.createNotification(
+                    ownerId,
+                    "Booking Cancelled",
+                    String.format("%s cancelled their booking for %s.",
+                            saved.getDriver().getFullName(), saved.getParking().getLocation())
+            );
+        }
+
+        return saved;
     }
 
     private BookingStatus parseStatus(String raw) {

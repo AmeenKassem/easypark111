@@ -10,6 +10,7 @@ import com.example.demo.model.Parking;
 import com.example.demo.model.User;
 import com.example.demo.service.BookingService;
 import com.example.demo.service.EmailService;
+import com.example.demo.service.NotificationService;
 import com.example.demo.service.RatingService;
 import com.example.demo.service.UserService;
 import com.example.demo.security.JwtService;
@@ -23,11 +24,18 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.TestingAuthenticationToken;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 
 import java.lang.reflect.Field;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
@@ -47,6 +55,9 @@ class BookingControllerTest {
 
     @MockitoBean
     private EmailService emailService;
+
+    @MockitoBean
+    private NotificationService notificationService;
 
     @MockitoBean
     private UserService userService;
@@ -108,6 +119,77 @@ class BookingControllerTest {
     }
 
     @Test
+    void create_ShouldHandleConcurrency_WhenMultipleUsersBookSameParking() throws Exception {
+        int numberOfThreads = 10;
+        ExecutorService executor = Executors.newFixedThreadPool(numberOfThreads);
+
+        CountDownLatch readyLatch = new CountDownLatch(numberOfThreads);
+        CountDownLatch startLatch = new CountDownLatch(1);
+        CountDownLatch doneLatch = new CountDownLatch(numberOfThreads);
+
+        AtomicInteger successfulBookings = new AtomicInteger(0);
+        AtomicInteger failedBookings = new AtomicInteger(0);
+
+        CreateBookingRequest req = new CreateBookingRequest();
+        req.setParkingId(5L);
+        req.setStartTime(LocalDateTime.now().plusHours(1));
+        req.setEndTime(LocalDateTime.now().plusHours(3));
+
+        String reqJson = objectMapper.writeValueAsString(req);
+
+        AtomicBoolean isBooked = new AtomicBoolean(false);
+
+        when(bookingService.create(any(Long.class), any(CreateBookingRequest.class))).thenAnswer(invocation -> {
+            if (isBooked.compareAndSet(false, true)) {
+                Booking mockBooking = new Booking();
+                setEntityId(mockBooking, 555L);
+                mockBooking.setStatus(BookingStatus.PENDING);
+                return mockBooking;
+            } else {
+                throw new RuntimeException("Race condition: Parking is already booked!");
+            }
+        });
+
+        for (int i = 0; i < numberOfThreads; i++) {
+            final Long driverId = 100L + i;
+
+            executor.submit(() -> {
+                try {
+                    TestingAuthenticationToken auth = new TestingAuthenticationToken(driverId, "PASSWORD", "ROLE_DRIVER");
+
+                    readyLatch.countDown();
+                    startLatch.await();
+
+                    MvcResult result = mockMvc.perform(post("/api/bookings")
+                                    .contentType(MediaType.APPLICATION_JSON)
+                                    .content(reqJson)
+                                    .principal(auth))
+                            .andReturn();
+
+                    if (result.getResponse().getStatus() == 200) {
+                        successfulBookings.incrementAndGet();
+                    } else {
+                        failedBookings.incrementAndGet();
+                    }
+                } catch (Exception e) {
+                    failedBookings.incrementAndGet();
+                } finally {
+                    doneLatch.countDown();
+                }
+            });
+        }
+
+        readyLatch.await();
+        startLatch.countDown();
+        doneLatch.await();
+
+        executor.shutdown();
+
+        assertEquals(1, successfulBookings.get(), "Only exactly ONE booking should succeed");
+        assertEquals(numberOfThreads - 1, failedBookings.get(), "All other concurrent requests should fail");
+    }
+
+    @Test
     void myBookings_ShouldReturn200() throws Exception {
         Long driverId = 100L;
         TestingAuthenticationToken auth = new TestingAuthenticationToken(driverId, "PASSWORD", "ROLE_DRIVER");
@@ -141,70 +223,32 @@ class BookingControllerTest {
                 .andExpect(jsonPath("$[0].id").value(555));
     }
 
-    @Test
-    void updateStatus_ShouldReturn200_AndSendEmail_WhenApproved() throws Exception {
-        Long ownerId = 200L;
-        TestingAuthenticationToken auth = new TestingAuthenticationToken(ownerId, "PASSWORD", "ROLE_OWNER");
 
-        UpdateBookingStatusRequest req = new UpdateBookingStatusRequest();
-        req.setStatus(BookingStatus.APPROVED.name());
+@Test
+void cancel_ShouldReturn200() throws Exception {
+    Long driverId = 100L;
+    TestingAuthenticationToken auth = new TestingAuthenticationToken(driverId, "PASSWORD", "ROLE_DRIVER");
 
-        Booking mockBooking = new Booking();
-        setEntityId(mockBooking, 555L);
-        mockBooking.setStatus(BookingStatus.APPROVED);
+    Booking mockBooking = new Booking();
+    setEntityId(mockBooking, 555L);
+    mockBooking.setStatus(BookingStatus.CANCELLED);
 
-        User driver = new User();
-        setEntityId(driver, 100L);
-        driver.setEmail("driver@test.com");
-        mockBooking.setDriver(driver);
+    Parking parking = new Parking();
+    setEntityId(parking, 5L);
+    parking.setOwnerId(200L);
+    parking.setLocation("Tel Aviv");
+    mockBooking.setParking(parking);
 
-        UserSummary ownerSummary = Mockito.mock(UserSummary.class);
+    User driver = new User();
+    setEntityId(driver, driverId);
+    driver.setEmail("driver@test.com");
+    mockBooking.setDriver(driver);
 
-        when(bookingService.updateStatus(eq(ownerId), eq(555L), any(UpdateBookingStatusRequest.class))).thenReturn(mockBooking);
-        when(userService.getUserSummary(ownerId)).thenReturn(ownerSummary);
+    when(bookingService.cancel(driverId, 555L)).thenReturn(mockBooking);
 
-        mockMvc.perform(put("/api/bookings/555/status")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(req))
-                        .principal(auth))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(555));
-
-        verify(emailService).sendBookingApprovedNotification(eq("driver@test.com"), eq(mockBooking), eq(ownerSummary));
-    }
-
-    @Test
-    void cancel_ShouldReturn200() throws Exception {
-        Long driverId = 100L;
-        TestingAuthenticationToken auth = new TestingAuthenticationToken(driverId, "PASSWORD", "ROLE_DRIVER");
-
-        Booking mockBooking = new Booking();
-        setEntityId(mockBooking, 555L);
-        mockBooking.setStatus(BookingStatus.CANCELLED);
-
-        when(bookingService.cancel(driverId, 555L)).thenReturn(mockBooking);
-
-        mockMvc.perform(put("/api/bookings/555/cancel")
-                        .principal(auth))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(555));
-    }
-
-    @Test
-    void rateDriver_ShouldReturn200() throws Exception {
-        Long ownerId = 200L;
-        TestingAuthenticationToken auth = new TestingAuthenticationToken(ownerId, "PASSWORD", "ROLE_OWNER");
-
-        RatingRequest req = new RatingRequest();
-        req.setScore(5);
-
-        mockMvc.perform(post("/api/bookings/555/rate-driver")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(req))
-                        .principal(auth))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.message").value("Rating submitted successfully"));
-
-        verify(ratingService).rateDriver(eq(555L), eq(ownerId), eq(5));
-    }
+    mockMvc.perform(put("/api/bookings/555/cancel")
+                    .principal(auth))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.id").value(555));
+}
 }

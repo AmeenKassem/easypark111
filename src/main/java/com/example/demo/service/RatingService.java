@@ -18,13 +18,16 @@ public class RatingService {
     private final DriverRatingRepository driverRatingRepository;
     private final BookingRepository bookingRepository;
     private final UserRepository userRepository;
+    private final NotificationService notificationService;
 
     public RatingService(DriverRatingRepository driverRatingRepository,
                          BookingRepository bookingRepository,
-                         UserRepository userRepository) {
+                         UserRepository userRepository,
+                         NotificationService notificationService) {
         this.driverRatingRepository = driverRatingRepository;
         this.bookingRepository = bookingRepository;
         this.userRepository = userRepository;
+        this.notificationService = notificationService;
     }
 
     @Transactional
@@ -65,5 +68,12 @@ public class RatingService {
         driver.setTotalRatings(newTotalRatings);
         driver.setAverageRating(newAverage);
         userRepository.save(driver);
+
+        // Create notification for the driver
+        notificationService.createNotification(
+            driver.getId(),
+            "New Rating",
+            "You received a " + score + "-star rating from a parking owner."
+        );
     }
 }

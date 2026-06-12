@@ -3,6 +3,7 @@ import { getAuthToken } from './session';
 import {API_BASE_URL} from "../config.js";
 
 const API_URL = `${API_BASE_URL}/api/reports`
+
 const getAuthHeaders = () => {
     const token = getAuthToken();
     return { headers: { Authorization: `Bearer ${token}` } };

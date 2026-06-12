@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { getCurrentUser, logout, subscribeAuthChanged } from '../../services/session'
+import { useUnreadNotifications } from '../../hooks/useUnreadNotifications'
 import '../../styles/layout.css'
 import ProfileModal from '../modals/ProfileModal'
 
@@ -34,6 +35,8 @@ export default function Layout({ title, children }) {
     // (kept for future use) modal that edits profile/role
     const [profileModalOpen, setProfileModalOpen] = useState(false)
     const [user, setUser] = useState(getCurrentUser())
+    // Shared real-time unread badge (also opens the WebSocket connection).
+    const { unread: unreadNotifications, unreadLabel: unreadBadgeLabel, refreshUnread } = useUnreadNotifications()
 
     // Responsive label for Back button
     const [isNarrowMobile, setIsNarrowMobile] = useState(() => {
@@ -48,13 +51,9 @@ export default function Layout({ title, children }) {
     }, [])
 
     useEffect(() => {
-        // initial sync (covers cases where storage changed before mount)
+        // Keep the local user in sync with login/logout (used for roles/menu).
         setUser(getCurrentUser())
-
-        // re-render when auth changes
-        return subscribeAuthChanged(() => {
-            setUser(getCurrentUser())
-        })
+        return subscribeAuthChanged(() => setUser(getCurrentUser()))
     }, [])
 
     const roles = new Set(user?.roles ?? [])
@@ -83,6 +82,12 @@ export default function Layout({ title, children }) {
     }
 
     useEffect(() => {
+        if (profileMenuOpen) {
+            // Refresh the count when the menu opens (await it — getUnreadNotificationCount
+            // is async; assigning the Promise directly would corrupt the badge state).
+            refreshUnread()
+        }
+
         if (!profileMenuOpen) return
 
         const onResizeOrScroll = () => {
@@ -102,7 +107,7 @@ export default function Layout({ title, children }) {
             window.removeEventListener('resize', onResizeOrScroll)
             window.removeEventListener('scroll', onResizeOrScroll, true)
         }
-    }, [profileMenuOpen])
+    }, [profileMenuOpen, refreshUnread])
 
     return (
         <div className={isAuthRoute ? 'ep-app ep-app-auth' : 'ep-app'}>
@@ -202,9 +207,32 @@ export default function Layout({ title, children }) {
                                         display: 'grid',
                                         placeItems: 'center',
                                         boxShadow: '0 10px 20px rgba(37, 99, 235, 0.25)',
+                                        position: 'relative',
                                     }}
                                 >
                                     <IconUser size={18} />
+                                    {unreadNotifications > 0 && (
+                                        <span
+                                            style={{
+                                                position: 'absolute',
+                                                top: 2,
+                                                right: 2,
+                                                minWidth: 18,
+                                                height: 18,
+                                                padding: '0 6px',
+                                                borderRadius: 999,
+                                                background: '#ef4444',
+                                                color: 'white',
+                                                fontSize: 12,
+                                                fontWeight: 800,
+                                                display: 'inline-flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                            }}
+                                        >
+                                            {unreadBadgeLabel}
+                                        </span>
+                                    )}
                                 </button>
                             </>
                         ) : (
@@ -340,6 +368,54 @@ export default function Layout({ title, children }) {
                                 My Bookings
                             </button>
                         )}
+
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setProfileMenuOpen(false)
+                                nav('/notifications')
+                            }}
+                            style={{
+                                width: '100%',
+                                height: 42,
+                                borderRadius: 12,
+                                border: 0,
+                                background: 'transparent',
+                                textAlign: 'left',
+                                padding: '0 12px',
+                                fontWeight: 600,
+                                cursor: 'pointer',
+                                color: '#1e293b',
+                                marginBottom: '5px',
+                                transition: 'background 0.2s',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                            }}
+                            onMouseOver={(e) => (e.currentTarget.style.background = '#f1f5f9')}
+                            onMouseOut={(e) => (e.currentTarget.style.background = 'transparent')}
+                        >
+                            <span>Notifications</span>
+                            {unreadNotifications > 0 && (
+                                <span
+                                    style={{
+                                        minWidth: 18,
+                                        height: 18,
+                                        padding: '0 6px',
+                                        borderRadius: 999,
+                                        background: '#ef4444',
+                                        color: 'white',
+                                        fontSize: 12,
+                                        fontWeight: 800,
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                    }}
+                                >
+                                    {unreadBadgeLabel}
+                                </span>
+                            )}
+                        </button>
 
                         {/* --- revenues / expenses BUTTONS --- */}
                         <button

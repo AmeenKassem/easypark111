@@ -327,3 +327,19 @@
     }
 
 }
+
+@media (max-width: 395px) {
+    .profile-menu {
+        position: absolute;
+        width: 160px !important;
+        left: 218px !important;
+        top: 70px !important;
+        background: rgba(255, 255, 255, 0.98);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(15, 23, 42, 0.1);
+        box-shadow: 0 18px 40px rgba(15, 23, 42, 0.18);
+        border-radius: 14px;
+        padding: 8px;
+    }
+
+}

@@ -3,6 +3,7 @@ package com.example.demo.service;
 import com.example.demo.dto.CreateBookingRequest;
 import com.example.demo.model.*;
 import com.example.demo.repository.BookingRepository;
+import com.example.demo.repository.DriverRatingRepository;
 import com.example.demo.repository.ParkingRepository;
 import com.example.demo.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -37,6 +38,12 @@ class BookingServiceTest {
 
     @Mock
     private UserRepository userRepository;
+
+    @Mock
+    private DriverRatingRepository driverRatingRepository;
+
+    @Mock
+    private NotificationService notificationService;
 
     @InjectMocks
     private BookingServiceImpl bookingService;

@@ -99,6 +99,8 @@ public class BookingController {
 
         Booking b = bookingService.updateStatus(ownerId, id, req);
 
+        // Driver notifications are created in BookingServiceImpl#updateStatus.
+        // The controller only owns the (optional) approval e-mail.
         if (b != null && b.getStatus().equals(BookingStatus.APPROVED)) {
             UserSummary ownerSummary = userService.getUserSummary(ownerId);
             emailService.sendBookingApprovedNotification(b.getDriver().getEmail(), b, ownerSummary);
@@ -116,6 +118,9 @@ public class BookingController {
         log.info("action=booking_cancel start userId={} bookingId={}", userId, id);
 
         Booking b = bookingService.cancel(userId, id);
+
+        // Owner notification is created in BookingServiceImpl#cancel (only when an
+        // actual cancellation occurs, never on a no-op re-cancel).
 
         log.info("action=booking_cancel success userId={} bookingId={} status={}",
                 userId, b.getId(), b.getStatus());

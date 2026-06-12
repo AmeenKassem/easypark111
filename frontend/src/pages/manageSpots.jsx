@@ -6,6 +6,7 @@ import Modal from '../components/modals/Modal.jsx'
 import CreateParkingPage from './CreateParkingPage.jsx'
 import '../styles/manageSpots.css'
 import {API_BASE_URL} from "../config.js";
+import { updateBookingStatus as updateBookingStatusApi } from '../services/booking'
 
 const API_BASE = API_BASE_URL
 
@@ -87,6 +88,9 @@ export default function ManageSpotsPage() {
     const [editAvailabilityOpen, setEditAvailabilityOpen] = useState(false)
     const [editAvailabilitySpot, setEditAvailabilitySpot] = useState(null)
 
+    // --- QR Code Warning State ---
+    const [showQrWarning, setShowQrWarning] = useState(false)
+
     const activeCount = useMemo(() => spots.filter((s) => !!s.active).length, [spots])
 
     const fetchOwnerBookings = async () => {
@@ -110,6 +114,24 @@ export default function ManageSpotsPage() {
         }
     }
 
+    // --- Check if User has QR setup ---
+    useEffect(() => {
+        const checkUserProfile = async () => {
+            try {
+                const res = await axios.get(`${API_BASE}/api/users/me`, {
+                    headers: { ...authHeaders() },
+                })
+                if (!res.data?.bitQrImageUrl) {
+                    setShowQrWarning(true)
+                }
+            } catch (e) {
+                console.error('Failed to fetch user profile for QR check.', e)
+            }
+        }
+
+        checkUserProfile()
+    }, [])
+
     useEffect(() => {
         fetchMySpots();
         fetchOwnerBookings();
@@ -120,16 +142,8 @@ export default function ManageSpotsPage() {
         setBookingSavingId(bookingId)
         setBookingsError('')
         try {
-            await axios.put(
-                `${API_BASE}/api/bookings/${bookingId}/status`,
-                { status }, // "APPROVED" | "REJECTED"
-                {
-                    headers: {
-                        'Content-Type': 'application/json',
-                        ...authHeaders(),
-                    },
-                },
-            )
+            // Shared with the notification approve/reject buttons (services/booking.js).
+            await updateBookingStatusApi(bookingId, status)
             await fetchOwnerBookings()
         } catch (e) {
             const msg =
@@ -817,6 +831,39 @@ export default function ManageSpotsPage() {
                                 fetchMySpots()
                             }}
                         />
+                    </Modal>
+                )}
+
+                {/* --- MISSING QR CODE MODAL --- */}
+                {showQrWarning && (
+                    <Modal onClose={() => nav('/manage-profile')}>
+                        <div style={{ width: '360px', maxWidth: '90vw', margin: '0 auto', textAlign: 'center' }}>
+                            <div style={{ marginBottom: '24px' }}>
+                                <h2 style={{ margin: 0, fontSize: '24px', fontWeight: '800', color: '#0f172a' }}>
+                                    Payment Setup Required
+                                </h2>
+                                <p style={{ marginTop: '12px', fontSize: '14px', color: '#64748b', lineHeight: '1.5' }}>
+                                    You must upload a Bit QR code to receive payments before you can manage or add parking spots.
+                                </p>
+                            </div>
+
+                            <button
+                                onClick={() => nav('/manage-profile')}
+                                style={{
+                                    width: '100%',
+                                    padding: '14px',
+                                    borderRadius: '12px',
+                                    border: 'none',
+                                    backgroundColor: '#0f172a',
+                                    fontWeight: '600',
+                                    color: '#fff',
+                                    cursor: 'pointer',
+                                    transition: 'background-color 0.2s'
+                                }}
+                            >
+                                Go to Manage Profile
+                            </button>
+                        </div>
                     </Modal>
                 )}
 

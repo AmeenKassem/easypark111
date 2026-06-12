@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo } from 'react'
 import Layout from '../components/layout/layout'
 import { cancelBooking, getMyBookings, rateParking } from '../services/booking'
 import '../styles/auth.css'
+import { API_BASE_URL } from '../config.js'
 
 function fmt(dt) {
     if (!dt) return ''
@@ -39,6 +40,12 @@ function canCancelBooking(b) {
     if (Number.isNaN(start.getTime())) return false
 
     return start > new Date()
+}
+
+function resolveFileUrl(path) {
+    if (!path) return ''
+    if (String(path).startsWith('http://') || String(path).startsWith('https://')) return path
+    return `${API_BASE_URL}${path}`
 }
 
 export default function MyBookingsPage() {
@@ -321,18 +328,64 @@ export default function MyBookingsPage() {
                                         {isApproved && (
                                             <div style={{
                                                 marginTop: 8,
-                                                padding: '10px 14px',
+                                                padding: '14px',
                                                 backgroundColor: '#f0fdf4',
                                                 border: '1px solid #bbf7d0',
                                                 borderRadius: '10px',
                                                 color: '#166534',
                                                 fontSize: '14px',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                gap: '8px'
+                                                display: 'grid',
+                                                gap: '10px'
                                             }}>
-                                                <span style={{ fontSize: '18px' }}>📞</span>
-                                                <span><strong>Owner Contact:</strong> {b.ownerPhone || 'Not available'}</span>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                    <span style={{ fontSize: '18px' }}>📞</span>
+                                                    <span><strong>Owner Contact:</strong> {b.ownerPhone || 'Not available'}</span>
+                                                </div>
+
+                                                {b.ownerBitPaymentUrl ? (
+                                                    <a
+                                                        href={b.ownerBitPaymentUrl}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        style={{
+                                                            display: 'inline-flex',
+                                                            justifyContent: 'center',
+                                                            alignItems: 'center',
+                                                            width: 160,
+                                                            backgroundColor: '#16a34a',
+                                                            color: 'white',
+                                                            textDecoration: 'none',
+                                                            border: 'none',
+                                                            padding: '10px 16px',
+                                                            borderRadius: '10px',
+                                                            cursor: 'pointer',
+                                                            fontWeight: 'bold',
+                                                            fontSize: '14px',
+                                                            boxShadow: '0 4px 6px -1px rgba(22, 163, 74, 0.25)',
+                                                        }}
+                                                    >
+                                                        Pay with Bit
+                                                    </a>
+                                                ) : b.ownerBitQrImageUrl ? (
+                                                    <div>
+                                                        <div style={{ fontWeight: 800, marginBottom: 8 }}>Scan this Bit QR to pay:</div>
+                                                        <img
+                                                            src={resolveFileUrl(b.ownerBitQrImageUrl)}
+                                                            alt="Owner Bit QR"
+                                                            style={{
+                                                                width: 180,
+                                                                height: 180,
+                                                                objectFit: 'contain',
+                                                                border: '1px solid #bbf7d0',
+                                                                borderRadius: 14,
+                                                                padding: 8,
+                                                                background: '#fff',
+                                                            }}
+                                                        />
+                                                    </div>
+                                                ) : (
+                                                    <div style={{ fontWeight: 800 }}>Owner did not upload Bit payment details yet.</div>
+                                                )}
                                             </div>
                                         )}
 

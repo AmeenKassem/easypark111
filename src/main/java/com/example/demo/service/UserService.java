@@ -14,9 +14,17 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.http.HttpStatus;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.net.URLEncoder;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
@@ -33,6 +41,7 @@ public class UserService {
     private final PasswordResetTokenRepository passwordResetTokenRepository;
     private final GoogleAuthService googleAuthService;
     private final EmailService emailService;
+    private final QrCodeService qrCodeService;
 
     private static final String TEMP_PASSWORD_CHARS =
             "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789";
@@ -44,16 +53,21 @@ public class UserService {
     @Value("${app.security.reset-token-expiration-minutes:30}")
     private long resetTokenExpirationMinutes;
 
+    @Value("${app.upload.dir:uploads}")
+    private String uploadDir;
+
     public UserService(UserRepository userRepository,
                        BCryptPasswordEncoder passwordEncoder,
                        PasswordResetTokenRepository passwordResetTokenRepository,
                        GoogleAuthService googleAuthService,
-                       EmailService emailService) {
+                       EmailService emailService,
+                       QrCodeService qrCodeService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.passwordResetTokenRepository = passwordResetTokenRepository;
         this.googleAuthService = googleAuthService;
         this.emailService = emailService;
+        this.qrCodeService = qrCodeService;
     }
 
     // ============================
@@ -233,6 +247,73 @@ public class UserService {
     }
 
 
+
+    @Transactional
+    public BitQrUploadResponse uploadBitQr(Long userId, MultipartFile file) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        if (file == null || file.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Bit QR image is required");
+        }
+
+        String contentType = file.getContentType();
+        if (contentType == null ||
+                !(contentType.equalsIgnoreCase("image/png")
+                        || contentType.equalsIgnoreCase("image/jpeg")
+                        || contentType.equalsIgnoreCase("image/jpg"))) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Only PNG/JPG images are allowed");
+        }
+
+        byte[] bytes;
+        try {
+            bytes = file.getBytes();
+        } catch (IOException ex) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Could not read uploaded file");
+        }
+
+        String decodedValue = qrCodeService.decodeQr(bytes);
+        String bitPaymentUrl = normalizeDecodedBitUrl(decodedValue);
+
+        if (bitPaymentUrl == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Could not find a valid Bit payment link inside this QR image");
+        }
+
+        String extension = contentType.equalsIgnoreCase("image/png") ? ".png" : ".jpg";
+        String fileName = "user-" + userId + "-" + UUID.randomUUID() + extension;
+
+        try {
+            Path uploadPath = Paths.get(uploadDir, "bit-qr").toAbsolutePath().normalize();
+            Files.createDirectories(uploadPath);
+            Files.write(uploadPath.resolve(fileName), bytes, StandardOpenOption.CREATE_NEW);
+        } catch (IOException ex) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to save Bit QR image");
+        }
+
+        String imageUrl = "/uploads/bit-qr/" + fileName;
+        user.setBitQrImageUrl(imageUrl);
+        user.setBitPaymentUrl(bitPaymentUrl);
+        userRepository.save(user);
+
+        return new BitQrUploadResponse(imageUrl, bitPaymentUrl);
+    }
+
+    private String normalizeDecodedBitUrl(String decodedValue) {
+        if (decodedValue == null) {
+            return null;
+        }
+
+        String value = decodedValue.trim();
+        if (value.isEmpty() || value.length() > 1000) {
+            return null;
+        }
+
+        if (value.startsWith("https://") || value.startsWith("http://") || value.startsWith("bit://")) {
+            return value;
+        }
+
+        return null;
+    }
 
     @Transactional
     public UserSummary updateRole(Long userId, UpdateUserRoleRequest req) {
@@ -457,7 +538,9 @@ public class UserService {
                 user.getFullName(),
                 user.getEmail(),
                 user.getPhone(),
-                user.getRole() == null ? null : user.getRole().name()
+                user.getRole() == null ? null : user.getRole().name(),
+                user.getBitQrImageUrl(),
+                user.getBitPaymentUrl()
         );
     }
 

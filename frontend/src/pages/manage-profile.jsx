@@ -11,11 +11,16 @@ export default function ManageProfilePage() {
     const [loading, setLoading] = useState(true)
     const [saving, setSaving] = useState(false)
     const [feedback, setFeedback] = useState({ message: '', isError: false })
+    const [bitQrFile, setBitQrFile] = useState(null)
+    const [bitQrPreview, setBitQrPreview] = useState('')
+    const [uploadingBitQr, setUploadingBitQr] = useState(false)
 
     const [form, setForm] = useState({
         fullName: '',
         phone: '',
         email: '',
+        bitQrImageUrl: '',
+        bitPaymentUrl: '',
     })
 
     const token = localStorage.getItem('easypark_token')
@@ -36,6 +41,8 @@ export default function ManageProfilePage() {
                     fullName: res.data?.fullName ?? '',
                     phone: res.data?.phone ?? '',
                     email: res.data?.email ?? '',
+                    bitQrImageUrl: res.data?.bitQrImageUrl ?? '',
+                    bitPaymentUrl: res.data?.bitPaymentUrl ?? '',
                 })
             } catch (e) {
                 setFeedback({ message: 'Failed to load profile.', isError: true })
@@ -51,6 +58,58 @@ export default function ManageProfilePage() {
     const onChange = (e) => {
         const { name, value } = e.target
         setForm((p) => ({ ...p, [name]: value }))
+    }
+
+    const resolveFileUrl = (path) => {
+        if (!path) return ''
+        if (String(path).startsWith('http://') || String(path).startsWith('https://')) return path
+        return `${API_BASE}${path}`
+    }
+
+    const handleBitQrFileChange = (e) => {
+        const file = e.target.files?.[0]
+        setBitQrFile(file || null)
+        setBitQrPreview(file ? URL.createObjectURL(file) : '')
+    }
+
+    const uploadBitQr = async () => {
+        if (!bitQrFile) {
+            setFeedback({ message: 'Please choose a Bit QR image first.', isError: true })
+            return
+        }
+
+        setUploadingBitQr(true)
+        setFeedback({ message: '', isError: false })
+
+        try {
+            if (!token) throw new Error('No token found')
+
+            const data = new FormData()
+            data.append('file', bitQrFile)
+
+            const res = await axios.post(`${API_BASE}/api/users/me/bit-qr`, data, {
+                headers: { Authorization: `Bearer ${token}` },
+            })
+
+            setForm((prev) => ({
+                ...prev,
+                bitQrImageUrl: res.data?.bitQrImageUrl ?? prev.bitQrImageUrl,
+                bitPaymentUrl: res.data?.bitPaymentUrl ?? prev.bitPaymentUrl,
+            }))
+            setBitQrFile(null)
+            setBitQrPreview('')
+            setFeedback({ message: 'Bit QR uploaded successfully.', isError: false })
+        } catch (e) {
+            const msg =
+                e?.response?.data?.message ||
+                e?.response?.data?.error ||
+                e?.response?.data ||
+                e?.message ||
+                'Failed to upload Bit QR.'
+            setFeedback({ message: String(msg), isError: true })
+        } finally {
+            setUploadingBitQr(false)
+        }
     }
 
     const persistAuth = (authResponse) => {
@@ -137,6 +196,49 @@ export default function ManageProfilePage() {
                                     onChange={onChange}
                                     placeholder="Enter email"
                                 />
+                            </div>
+
+                            <div className="auth-field">
+                                <label>Bit QR Code</label>
+                                <input
+                                    className="auth-input"
+                                    type="file"
+                                    accept="image/png,image/jpeg,image/jpg"
+                                    onChange={handleBitQrFileChange}
+                                />
+
+                                {(bitQrPreview || form.bitQrImageUrl) && (
+                                    <img
+                                        src={bitQrPreview || resolveFileUrl(form.bitQrImageUrl)}
+                                        alt="Bit QR"
+                                        style={{
+                                            width: 170,
+                                            height: 170,
+                                            objectFit: 'contain',
+                                            marginTop: 12,
+                                            border: '1px solid #e2e8f0',
+                                            borderRadius: 14,
+                                            padding: 8,
+                                            background: '#fff',
+                                        }}
+                                    />
+                                )}
+
+                                {form.bitPaymentUrl && (
+                                    <div style={{ marginTop: 8, color: '#166534', fontWeight: 800, fontSize: 13 }}>
+                                        Bit payment link detected successfully.
+                                    </div>
+                                )}
+
+                                <button
+                                    type="button"
+                                    className="auth-primary"
+                                    onClick={uploadBitQr}
+                                    disabled={uploadingBitQr || !bitQrFile}
+                                    style={{ marginTop: 12 }}
+                                >
+                                    {uploadingBitQr ? 'Uploading...' : 'Upload Bit QR'}
+                                </button>
                             </div>
 
                             {feedback.message && (

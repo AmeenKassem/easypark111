@@ -11,6 +11,7 @@ import ManageSpotsPage from '../pages/manageSpots.jsx'
 import ManageProfilePage from '../pages/manage-profile'
 import ChangePasswordPage from '../pages/ChangePasswordPage.jsx'
 import MyBookingsPage from '../pages/MyBookingsPage.jsx'
+import NotificationsPage from '../pages/NotificationsPage.jsx'
 import ForgotPasswordPage from '../pages/ForgotPasswordPage.jsx'
 import RevenuesPage from '../pages/RevenuesPage.jsx'
 import ExpensesPage from '../pages/ExpensesPage.jsx'
@@ -82,6 +83,15 @@ export const router = createBrowserRouter([
         element: (
             <RequireRole allow={['DRIVER']}>
                 <MyBookingsPage />
+            </RequireRole>
+        ),
+    },
+
+    {
+        path: '/notifications',
+        element: (
+            <RequireRole allow={['DRIVER', 'OWNER']}>
+                <NotificationsPage />
             </RequireRole>
         ),
     },

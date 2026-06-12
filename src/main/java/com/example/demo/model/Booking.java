@@ -41,6 +41,12 @@ public class Booking {
     @Transient
     private String ownerPhone;
 
+    @Transient
+    private String ownerBitQrImageUrl;
+
+    @Transient
+    private String ownerBitPaymentUrl;
+
     // --- NEW: Indicates if the owner already rated the driver for this booking ---
     @Transient
     private Boolean ratedByOwner = false;
@@ -87,6 +93,12 @@ public class Booking {
 
     public String getOwnerPhone() { return ownerPhone; }
     public void setOwnerPhone(String ownerPhone) { this.ownerPhone = ownerPhone; }
+
+    public String getOwnerBitQrImageUrl() { return ownerBitQrImageUrl; }
+    public void setOwnerBitQrImageUrl(String ownerBitQrImageUrl) { this.ownerBitQrImageUrl = ownerBitQrImageUrl; }
+
+    public String getOwnerBitPaymentUrl() { return ownerBitPaymentUrl; }
+    public void setOwnerBitPaymentUrl(String ownerBitPaymentUrl) { this.ownerBitPaymentUrl = ownerBitPaymentUrl; }
 
     public Boolean getRatedByOwner() { return ratedByOwner; }
     public void setRatedByOwner(Boolean ratedByOwner) { this.ratedByOwner = ratedByOwner; }

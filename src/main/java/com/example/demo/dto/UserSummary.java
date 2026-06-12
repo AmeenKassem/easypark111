@@ -7,55 +7,44 @@ public class UserSummary {
     private String email;
     private String phone;
     private String role;
+    private String bitQrImageUrl;
+    private String bitPaymentUrl;
 
     public UserSummary() {
     }
 
     public UserSummary(Long id, String fullName, String email, String phone, String role) {
+        this(id, fullName, email, phone, role, null, null);
+    }
+
+    public UserSummary(Long id, String fullName, String email, String phone, String role, String bitQrImageUrl, String bitPaymentUrl) {
         this.id = id;
         this.fullName = fullName;
         this.email = email;
         this.phone = phone;
         this.role = role;
+        this.bitQrImageUrl = bitQrImageUrl;
+        this.bitPaymentUrl = bitPaymentUrl;
     }
 
-    public Long getId() {
-        return id;
-    }
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
 
-    public void setId(Long id) {
-        this.id = id;
-    }
+    public String getFullName() { return fullName; }
+    public void setFullName(String fullName) { this.fullName = fullName; }
 
-    public String getFullName() {
-        return fullName;
-    }
+    public String getEmail() { return email; }
+    public void setEmail(String email) { this.email = email; }
 
-    public void setFullName(String fullName) {
-        this.fullName = fullName;
-    }
+    public String getPhone() { return phone; }
+    public void setPhone(String phone) { this.phone = phone; }
 
-    public String getEmail() {
-        return email;
-    }
+    public String getRole() { return role; }
+    public void setRole(String role) { this.role = role; }
 
-    public void setEmail(String email) {
-        this.email = email;
-    }
+    public String getBitQrImageUrl() { return bitQrImageUrl; }
+    public void setBitQrImageUrl(String bitQrImageUrl) { this.bitQrImageUrl = bitQrImageUrl; }
 
-    public String getPhone() {
-        return phone;
-    }
-
-    public void setPhone(String phone) {
-        this.phone = phone;
-    }
-
-    public String getRole() {
-        return role;
-    }
-
-    public void setRole(String role) {
-        this.role = role;
-    }
+    public String getBitPaymentUrl() { return bitPaymentUrl; }
+    public void setBitPaymentUrl(String bitPaymentUrl) { this.bitPaymentUrl = bitPaymentUrl; }
 }

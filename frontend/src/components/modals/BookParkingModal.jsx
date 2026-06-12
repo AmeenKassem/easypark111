@@ -845,7 +845,7 @@ export default function BookParkingModal({ isOpen, onClose, spot, onBooked }) {
             ).padStart(2, '0')}:00`,
         }
 
-        await createBooking(payload)
+        return await createBooking(payload)
     }
 
     const handleConfirm = async () => {
@@ -853,8 +853,8 @@ export default function BookParkingModal({ isOpen, onClose, spot, onBooked }) {
         setSaving(true)
         setFeedback({ message: '', isError: false })
         try {
-            await doCreateBooking()
-            onBooked?.()
+            const booking = await doCreateBooking()
+            onBooked?.(booking)
             onClose?.()
         } catch (e) {
             console.error(e)
@@ -870,8 +870,8 @@ export default function BookParkingModal({ isOpen, onClose, spot, onBooked }) {
         setSavingAdd(true)
         setFeedback({ message: '', isError: false })
         try {
-            await doCreateBooking()
-            onBooked?.()
+            const booking = await doCreateBooking()
+            onBooked?.(booking)
             setBusyIntervals([])
             resetSelection({ dateOverride: startOfDay(new Date()) })
         } catch (e) {

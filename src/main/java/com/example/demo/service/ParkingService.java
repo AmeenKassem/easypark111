@@ -1,6 +1,7 @@
 package com.example.demo.service;
 
 import com.example.demo.dto.BookedIntervalResponse;
+import com.example.demo.dto.ParkingResponse;
 import com.example.demo.dto.CreateParkingRequest;
 import com.example.demo.dto.UpdateParkingRequest;
 import com.example.demo.model.*;
@@ -10,6 +11,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,15 +30,21 @@ public class ParkingService {
     private final ParkingRepository parkingRepository;
     private final BookingRepository bookingRepository;
     private final ParkingRatingRepository parkingRatingRepository;
+    private final NotificationService notificationService;
+    private final SimpMessagingTemplate messagingTemplate;
     private static final Collection<BookingStatus> BUSY_STATUSES =
             List.of(BookingStatus.PENDING, BookingStatus.APPROVED);
 
     public ParkingService(ParkingRepository parkingRepository,
                           BookingRepository bookingRepository,
-                          ParkingRatingRepository parkingRatingRepository) {
+                          ParkingRatingRepository parkingRatingRepository,
+                          NotificationService notificationService,
+                          SimpMessagingTemplate messagingTemplate) {
         this.parkingRepository = parkingRepository;
         this.bookingRepository = bookingRepository;
         this.parkingRatingRepository = parkingRatingRepository;
+        this.notificationService = notificationService;
+        this.messagingTemplate = messagingTemplate;
     }
 
     @Transactional
@@ -56,6 +64,12 @@ public class ParkingService {
         handleAvailability(p, req.getAvailabilityType(), req.getSpecificAvailability(), req.getRecurringSchedule());
 
         Parking saved = parkingRepository.save(p);
+
+        messagingTemplate.convertAndSend(
+                "/topic/parking-spots",
+                ParkingResponse.from(saved)
+        );
+
         log.info("action=parking_create_service success ownerId={} parkingId={}", ownerId, saved.getId());
         return saved;
     }
@@ -235,6 +249,13 @@ public class ParkingService {
 
         log.info("action=parking_rate success userId={} parkingId={} rating={} updated={} newAverage={} ratingCount={}",
                 userId, parkingId, rating, isUpdate, saved.getAverageRating(), saved.getRatingCount());
+
+        // Create notification for the owner
+        notificationService.createNotification(
+            p.getOwnerId(),
+            "New Parking Rating",
+            "Your parking spot at " + p.getLocation() + " received a " + rating + "-star rating from a driver."
+        );
 
         return saved;
     }

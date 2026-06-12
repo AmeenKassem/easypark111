@@ -25,6 +25,12 @@ public class User {
 
     private String phone;
 
+    @Column(name = "bit_qr_image_url", length = 1000)
+    private String bitQrImageUrl;
+
+    @Column(name = "bit_payment_url", length = 1000)
+    private String bitPaymentUrl;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private Role role;
@@ -71,6 +77,12 @@ public class User {
 
     public String getPhone() { return phone; }
     public void setPhone(String phone) { this.phone = phone; }
+
+    public String getBitQrImageUrl() { return bitQrImageUrl; }
+    public void setBitQrImageUrl(String bitQrImageUrl) { this.bitQrImageUrl = bitQrImageUrl; }
+
+    public String getBitPaymentUrl() { return bitPaymentUrl; }
+    public void setBitPaymentUrl(String bitPaymentUrl) { this.bitPaymentUrl = bitPaymentUrl; }
 
     public String getPasswordHash() { return passwordHash; }
     public void setPasswordHash(String passwordHash) { this.passwordHash = passwordHash; }
