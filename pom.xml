@@ -105,6 +105,17 @@
 			<artifactId>javase</artifactId>
 			<version>3.5.3</version>
 		</dependency>
+				<!-- AI API -->
+		<dependency>
+			<groupId>dev.langchain4j</groupId>
+			<artifactId>langchain4j-spring-boot-starter</artifactId>
+			<version>0.36.2</version>
+		</dependency>
+		<dependency>
+			<groupId>dev.langchain4j</groupId>
+			<artifactId>langchain4j-google-ai-gemini</artifactId>
+			<version>0.36.2</version>
+		</dependency>
 
 		<!-- Tests -->
 		<dependency>
